@@ -1,9 +1,9 @@
 {
   "name": "MikroCMS Core",
   "channel": "stable",
-  "latest_version": "1.0.4",
+  "latest_version": "1.0.5",
   "published_at": "2026-05-05T00:00:00Z",
   "changelog_url": "https://github.com/mijsys/MikroCMS/releases",
   "download_url": "https://github.com/mijsys/MikroCMS/archive/refs/heads/main.zip",
-  "notes": "Wersja 1.0.4: automatyczne aktualizacje core oraz wzmocnione logowanie 2FA (TOTP + .mijauth)."
+  "notes": "Wersja 1.0.5: nowoczesny panel administratora oraz poprawiony, bezpieczniejszy mechanizm aktualizacji core."
 }
