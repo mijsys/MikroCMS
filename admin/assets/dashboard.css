@@ -344,7 +344,15 @@ td small {
 	border-radius: 12px;
 	overflow: hidden;
 	margin-bottom: 12px;
-	background: #ffffff;
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(240, 249, 255, 0.92)),
+		repeating-linear-gradient(
+			90deg,
+			rgba(130, 185, 222, 0.08) 0,
+			rgba(130, 185, 222, 0.08) 16px,
+			rgba(130, 185, 222, 0.03) 16px,
+			rgba(130, 185, 222, 0.03) 32px
+		);
 }
 
 .builder-section-overlay {
@@ -360,6 +368,23 @@ td small {
 	color: #dff4ff;
 	font-size: 12px;
 	backdrop-filter: blur(4px);
+}
+
+.builder-section-overlay strong {
+	font-size: 13px;
+	font-weight: 800;
+	line-height: 1.2;
+}
+
+.builder-section-overlay span {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: rgba(145, 200, 236, 0.18);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.03em;
 }
 
 .builder-resize-handle {
@@ -484,6 +509,33 @@ td small {
 
 .container-editor-fields .full {
 	grid-column: 1 / -1;
+}
+
+.container-editor-fields label {
+	display: block;
+	margin-bottom: 6px;
+	font-size: 13px;
+	color: #d3e9fb;
+}
+
+.container-editor-fields input,
+.container-editor-fields textarea {
+	width: 100%;
+	color: var(--text);
+	background: linear-gradient(180deg, rgba(8, 23, 35, 0.98), rgba(8, 20, 31, 0.92));
+	border: 1px solid rgba(107, 156, 190, 0.42);
+	border-radius: 10px;
+	padding: 10px 12px;
+}
+
+.container-editor-fields textarea {
+	min-height: 96px;
+	resize: vertical;
+}
+
+.container-editor-fields input::placeholder,
+.container-editor-fields textarea::placeholder {
+	color: #8eaec3;
 }
 
 .placement-item {
