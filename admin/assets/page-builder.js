@@ -135,31 +135,97 @@
         empty.style.display = list.querySelector('.builder-item') ? 'none' : 'block';
     }
 
+    var dragNewType = null;
+    var dropPlaceholder = null;
+
+    function removePlaceholder() {
+        if (dropPlaceholder && dropPlaceholder.parentNode) {
+            dropPlaceholder.parentNode.removeChild(dropPlaceholder);
+        }
+        dropPlaceholder = null;
+    }
+
+    function getAfterElement(y) {
+        return Array.prototype.slice.call(
+            list.querySelectorAll('.builder-item:not(.dragging):not(.builder-drop-placeholder)')
+        ).find(function (el) {
+            var rect = el.getBoundingClientRect();
+            return y < rect.top + rect.height / 2;
+        });
+    }
+
     list.addEventListener('dragover', function (e) {
         e.preventDefault();
         var dragging = list.querySelector('.builder-item.dragging');
-        if (!dragging) {
+
+        if (dragging) {
+            removePlaceholder();
+            var after = getAfterElement(e.clientY);
+            if (after) {
+                list.insertBefore(dragging, after);
+            } else {
+                list.appendChild(dragging);
+            }
             return;
         }
 
-        var after = Array.prototype.slice.call(list.querySelectorAll('.builder-item:not(.dragging)')).find(function (el) {
-            var rect = el.getBoundingClientRect();
-            return e.clientY < rect.top + rect.height / 2;
-        });
-
-        if (after) {
-            list.insertBefore(dragging, after);
-        } else {
-            list.appendChild(dragging);
+        if (dragNewType) {
+            e.dataTransfer.dropEffect = 'copy';
+            if (!dropPlaceholder) {
+                dropPlaceholder = document.createElement('div');
+                dropPlaceholder.className = 'builder-drop-placeholder';
+                dropPlaceholder.textContent = '+ Upusc tutaj';
+            }
+            var afterEl = getAfterElement(e.clientY);
+            if (afterEl) {
+                list.insertBefore(dropPlaceholder, afterEl);
+            } else {
+                list.appendChild(dropPlaceholder);
+            }
         }
     });
 
+    list.addEventListener('dragleave', function (e) {
+        if (!list.contains(/** @type {Node} */ (e.relatedTarget))) {
+            removePlaceholder();
+        }
+    });
+
+    list.addEventListener('drop', function (e) {
+        e.preventDefault();
+        if (!dragNewType) { return; }
+        var newItem = makeItem(dragNewType);
+        if (dropPlaceholder && dropPlaceholder.parentNode) {
+            list.insertBefore(newItem, dropPlaceholder);
+            removePlaceholder();
+        } else {
+            list.appendChild(newItem);
+        }
+        renderEmpty();
+        sync();
+        dragNewType = null;
+    });
+
     document.querySelectorAll('[data-builder2-add]').forEach(function (btn) {
+        btn.draggable = true;
         btn.addEventListener('click', function () {
             var type = btn.getAttribute('data-builder2-add') || 'text';
             list.appendChild(makeItem(type));
             renderEmpty();
             sync();
+        });
+
+        btn.addEventListener('dragstart', function (e) {
+            dragNewType = btn.getAttribute('data-builder2-add') || 'text';
+            e.dataTransfer.effectAllowed = 'copy';
+            e.dataTransfer.setData('text/plain', dragNewType);
+            btn.classList.add('toolbar-dragging');
+        });
+
+        btn.addEventListener('dragend', function () {
+            btn.classList.remove('toolbar-dragging');
+            removePlaceholder();
+            dragNewType = null;
         });
     });
 
