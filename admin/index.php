@@ -15,10 +15,18 @@ $flash = cms_pull_flash();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!cms_verify_csrf($_POST['csrf_token'] ?? null)) {
         $error = 'Nieprawidlowy token bezpieczenstwa.';
-    } elseif (!cms_login($_POST['username'] ?? '', $_POST['password'] ?? '')) {
-        $error = 'Nieprawidlowy login lub haslo.';
     } else {
-        cms_redirect(cms_url('admin/dashboard.php'));
+        $user = cms_authenticate_credentials((string) ($_POST['username'] ?? ''), (string) ($_POST['password'] ?? ''));
+        if (!$user) {
+            $error = 'Nieprawidlowy login lub haslo.';
+        } elseif (cms_user_has_2fa($user)) {
+            cms_session_start();
+            $_SESSION['cms_pending_2fa_user_id'] = (int) $user['id'];
+            cms_redirect(cms_url('admin/verify-2fa.php'));
+        } else {
+            cms_finalize_login($user);
+            cms_redirect(cms_url('admin/dashboard.php'));
+        }
     }
 }
 ?>

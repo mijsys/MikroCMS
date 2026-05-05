@@ -9,6 +9,26 @@ if (!cms_is_installed()) {
 cms_require_login();
 $user = cms_current_user();
 $db = cms_db();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!cms_verify_csrf($_POST['csrf_token'] ?? null)) {
+        cms_flash('error', 'Nieprawidlowy token bezpieczenstwa.');
+        cms_redirect(cms_url('admin/dashboard.php'));
+    }
+
+    try {
+        $action = (string) ($_POST['action'] ?? '');
+        if ($action === 'update_core') {
+            $result = cms_install_or_update_core_from_manifest();
+            cms_flash('success', 'CMS zostal zaktualizowany z wersji ' . $result['from'] . ' do ' . $result['to'] . '.');
+        }
+    } catch (Throwable $e) {
+        cms_flash('error', $e->getMessage());
+    }
+
+    cms_redirect(cms_url('admin/dashboard.php'));
+}
+
 $flash = cms_pull_flash();
 
 $pageCount = (int) $db->query('SELECT COUNT(*) FROM cms_pages')->fetchColumn();
@@ -82,6 +102,7 @@ $coreDownloadUrl = cms_core_update_download_url($coreUpdate);
                             <span class="muted" style="font-size:14px"> -> <?= htmlspecialchars((string) $coreUpdate['remote_version']) ?></span>
                         <?php endif; ?>
                     </div>
+                    <div class="muted" style="font-size:12px;margin-top:4px">Kod: <?= htmlspecialchars(CMS_CODE_VERSION) ?></div>
                     <div style="margin-top:8px">
                         <?php if (!empty($coreUpdate['has_update'])): ?>
                             <span class="badge" style="background:rgba(251,191,36,.14);color:#fbbf24">Nowa wersja dostepna</span>
@@ -126,7 +147,11 @@ $coreDownloadUrl = cms_core_update_download_url($coreUpdate);
 
             <div class="actions">
                 <?php if (!empty($coreUpdate['has_update']) && $coreDownloadUrl !== ''): ?>
-                    <a class="btn" href="<?= htmlspecialchars($coreDownloadUrl) ?>" target="_blank" rel="noopener noreferrer">Aktualizuj CMS</a>
+                    <form method="post">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
+                        <input type="hidden" name="action" value="update_core">
+                        <button class="btn" type="submit">Aktualizuj CMS</button>
+                    </form>
                 <?php else: ?>
                     <button class="btn secondary" type="button" disabled style="opacity:.55;cursor:not-allowed">Aktualizuj CMS</button>
                 <?php endif; ?>

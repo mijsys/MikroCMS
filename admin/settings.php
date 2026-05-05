@@ -10,6 +10,14 @@ cms_require_login();
 $user = cms_current_user();
 $db = cms_db();
 
+$loadUserById = static function (int $userId) use ($db): ?array {
+    $stmt = $db->prepare('SELECT id, username, email, role, twofa_enabled, twofa_totp_secret, twofa_mijauth_key, twofa_mijauth_token FROM cms_users WHERE id = ?');
+    $stmt->execute([$userId]);
+    $row = $stmt->fetch();
+
+    return is_array($row) ? $row : null;
+};
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!cms_verify_csrf($_POST['csrf_token'] ?? null)) {
         cms_flash('error', 'Nieprawidlowy token bezpieczenstwa.');
@@ -18,6 +26,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $action = (string) ($_POST['action'] ?? 'save_settings');
+        if ($action === 'twofa_generate_setup') {
+            if (!$user || empty($user['id'])) {
+                throw new RuntimeException('Nie mozna zaladowac uzytkownika.');
+            }
+            $setup = cms_generate_user_2fa_bootstrap($user);
+            cms_session_start();
+            $_SESSION['cms_twofa_setup'] = $setup;
+            cms_flash('success', 'Wygenerowano nowa konfiguracje 2FA. Zeskanuj kod TOTP i zapisz plik .mijauth.');
+            cms_redirect(cms_url('admin/settings.php'));
+        }
+
+        if ($action === 'twofa_regenerate_file') {
+            if (!$user || empty($user['id'])) {
+                throw new RuntimeException('Nie mozna zaladowac uzytkownika.');
+            }
+            $fresh = $loadUserById((int) $user['id']);
+            if (!$fresh) {
+                throw new RuntimeException('Nie mozna zaladowac danych 2FA.');
+            }
+            $result = cms_regenerate_user_mijauth_file($fresh);
+            cms_session_start();
+            $_SESSION['cms_twofa_setup'] = array_merge($_SESSION['cms_twofa_setup'] ?? [], $result);
+            cms_flash('success', 'Wygenerowano nowy plik .mijauth. Aby aktywowac, potwierdz kodem TOTP.');
+            cms_redirect(cms_url('admin/settings.php'));
+        }
+
+        if ($action === 'twofa_enable') {
+            if (!$user || empty($user['id'])) {
+                throw new RuntimeException('Nie mozna zaladowac uzytkownika.');
+            }
+            $fresh = $loadUserById((int) $user['id']);
+            if (!$fresh) {
+                throw new RuntimeException('Nie mozna zaladowac danych 2FA.');
+            }
+            $totpCode = trim((string) ($_POST['twofa_totp_code'] ?? ''));
+            $mijauthFile = trim((string) ($_POST['twofa_mijauth_file'] ?? ''));
+            if ($totpCode === '' || $mijauthFile === '') {
+                throw new RuntimeException('Podaj kod TOTP oraz zawartosc pliku .mijauth.');
+            }
+            if (!cms_verify_user_2fa_challenge($fresh, $totpCode, $mijauthFile)) {
+                throw new RuntimeException('Weryfikacja 2FA nie powiodla sie. Sprawdz kod i plik .mijauth.');
+            }
+
+            cms_update_user_2fa_setup(
+                (int) $fresh['id'],
+                (string) ($fresh['twofa_totp_secret'] ?? ''),
+                (string) ($fresh['twofa_mijauth_key'] ?? ''),
+                (string) ($fresh['twofa_mijauth_token'] ?? ''),
+                true
+            );
+            cms_session_start();
+            unset($_SESSION['cms_twofa_setup']);
+            cms_flash('success', '2FA zostalo aktywowane. Od kolejnego logowania wymagany jest TOTP i plik .mijauth.');
+            cms_redirect(cms_url('admin/settings.php'));
+        }
+
+        if ($action === 'twofa_disable') {
+            if (!$user || empty($user['id'])) {
+                throw new RuntimeException('Nie mozna zaladowac uzytkownika.');
+            }
+            cms_disable_user_2fa((int) $user['id']);
+            cms_session_start();
+            unset($_SESSION['cms_twofa_setup']);
+            cms_flash('success', '2FA zostalo wylaczone.');
+            cms_redirect(cms_url('admin/settings.php'));
+        }
+
         if ($action === 'save_translations') {
             $translationLang = cms_normalize_lang_code((string) ($_POST['translation_lang'] ?? 'en'), 'en');
             $translationsJson = (string) ($_POST['translations_json'] ?? '{}');
@@ -77,6 +152,19 @@ $translationLang = isset($_GET['translation_lang'])
     ? cms_normalize_lang_code((string) $_GET['translation_lang'], 'en')
     : 'en';
 $translationsJson = json_encode(cms_translations_for_lang($translationLang), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$userTwoFa = $user && !empty($user['id']) ? $loadUserById((int) $user['id']) : null;
+cms_session_start();
+$twoFaSetup = $_SESSION['cms_twofa_setup'] ?? null;
+if (!is_array($twoFaSetup)) {
+    $twoFaSetup = [];
+}
+$twoFaEnabled = (bool) ((int) ($userTwoFa['twofa_enabled'] ?? 0));
+$twoFaHasSecrets = trim((string) ($userTwoFa['twofa_totp_secret'] ?? '')) !== '' && trim((string) ($userTwoFa['twofa_mijauth_key'] ?? '')) !== '';
+$twoFaProvisioningUri = $twoFaHasSecrets
+    ? MijAuth::getTotpProvisioningUri((string) ($userTwoFa['username'] ?? 'admin'), (string) $userTwoFa['twofa_totp_secret'], 'MikroCMS')
+    : '';
+$twoFaFileContent = (string) ($twoFaSetup['mijauth_file_content'] ?? '');
+$twoFaSecretPreview = (string) ($twoFaSetup['totp_secret'] ?? ($userTwoFa['twofa_totp_secret'] ?? ''));
 ?>
 <!DOCTYPE html>
 <html lang="pl">
@@ -141,6 +229,56 @@ $translationsJson = json_encode(cms_translations_for_lang($translationLang), JSO
                         <div><strong>Liczba stron:</strong> <?= $pageCount ?></div>
                         <div><strong>Liczba pluginow:</strong> <?= $pluginCount ?></div>
                     </div>
+                </section>
+
+                <section class="panel">
+                    <h2>Bezpieczenstwo i 2FA</h2>
+                    <p class="muted">Wymaga kodu TOTP oraz pliku .mijauth przy logowaniu.</p>
+                    <div class="db-meta" style="margin-bottom:12px">
+                        <div><strong>Status 2FA:</strong> <?= $twoFaEnabled ? 'Aktywne' : 'Nieaktywne' ?></div>
+                        <div><strong>Sekrety:</strong> <?= $twoFaHasSecrets ? 'Skonfigurowane' : 'Brak' ?></div>
+                    </div>
+
+                    <?php if (!$twoFaHasSecrets): ?>
+                        <form method="post" style="margin-bottom:12px">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
+                            <input type="hidden" name="action" value="twofa_generate_setup">
+                            <button class="btn" type="submit">Wygeneruj konfiguracje 2FA</button>
+                        </form>
+                    <?php else: ?>
+                        <div class="field"><label>Sekret TOTP</label><input type="text" readonly value="<?= htmlspecialchars($twoFaSecretPreview) ?>"></div>
+                        <div class="field"><label>URI TOTP (aplikacja Authenticator)</label><input type="text" readonly value="<?= htmlspecialchars($twoFaProvisioningUri) ?>"></div>
+
+                        <form method="post" style="margin-bottom:12px">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
+                            <input type="hidden" name="action" value="twofa_regenerate_file">
+                            <button class="btn" type="submit">Regeneruj plik .mijauth</button>
+                        </form>
+
+                        <?php if ($twoFaFileContent !== ''): ?>
+                            <div class="field">
+                                <label>Zawartosc pliku .mijauth (zapisz lokalnie)</label>
+                                <textarea readonly style="min-height:140px"><?= htmlspecialchars($twoFaFileContent) ?></textarea>
+                            </div>
+                            <p class="muted" style="margin-top:-4px">Plik zapisz jako <strong>user-<?= (int) ($userTwoFa['id'] ?? 0) ?>.mijauth</strong>.</p>
+                        <?php endif; ?>
+
+                        <?php if (!$twoFaEnabled): ?>
+                            <form method="post">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
+                                <input type="hidden" name="action" value="twofa_enable">
+                                <div class="field"><label>Kod TOTP (6 cyfr)</label><input type="text" name="twofa_totp_code" maxlength="6" required></div>
+                                <div class="field"><label>Zawartosc pliku .mijauth</label><textarea name="twofa_mijauth_file" style="min-height:120px" required><?= htmlspecialchars($twoFaFileContent) ?></textarea></div>
+                                <button class="btn" type="submit">Aktywuj 2FA</button>
+                            </form>
+                        <?php else: ?>
+                            <form method="post">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
+                                <input type="hidden" name="action" value="twofa_disable">
+                                <button class="btn" type="submit">Wylacz 2FA</button>
+                            </form>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </section>
 
                 <section class="panel">

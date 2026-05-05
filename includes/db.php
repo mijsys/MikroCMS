@@ -133,6 +133,10 @@ function cms_init_db(PDO $db): void
             email VARCHAR(191) NOT NULL DEFAULT '',
             password_hash VARCHAR(255) NOT NULL,
             role VARCHAR(50) NOT NULL DEFAULT 'admin',
+            twofa_enabled TINYINT(1) NOT NULL DEFAULT 0,
+            twofa_totp_secret VARCHAR(128) NOT NULL DEFAULT '',
+            twofa_mijauth_key TEXT NULL,
+            twofa_mijauth_token VARCHAR(191) NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
@@ -202,6 +206,10 @@ function cms_init_db(PDO $db): void
             "ALTER TABLE cms_pages ADD COLUMN parent_id INT NULL AFTER id",
             "ALTER TABLE cms_pages ADD COLUMN builder_data LONGTEXT NOT NULL AFTER content",
             "ALTER TABLE cms_pages ADD COLUMN sort_order INT NOT NULL DEFAULT 0 AFTER is_homepage",
+            "ALTER TABLE cms_users ADD COLUMN twofa_enabled TINYINT(1) NOT NULL DEFAULT 0",
+            "ALTER TABLE cms_users ADD COLUMN twofa_totp_secret VARCHAR(128) NOT NULL DEFAULT ''",
+            "ALTER TABLE cms_users ADD COLUMN twofa_mijauth_key TEXT NULL",
+            "ALTER TABLE cms_users ADD COLUMN twofa_mijauth_token VARCHAR(191) NULL",
         ] as $sql) {
             try {
                 $db->exec($sql);
@@ -220,6 +228,10 @@ function cms_init_db(PDO $db): void
             email TEXT NOT NULL DEFAULT '',
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'admin',
+            twofa_enabled INTEGER NOT NULL DEFAULT 0,
+            twofa_totp_secret TEXT NOT NULL DEFAULT '',
+            twofa_mijauth_key TEXT,
+            twofa_mijauth_token TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )");
 
@@ -290,6 +302,10 @@ function cms_init_db(PDO $db): void
             "ALTER TABLE cms_pages ADD COLUMN parent_id INTEGER DEFAULT NULL",
             "ALTER TABLE cms_pages ADD COLUMN builder_data TEXT NOT NULL DEFAULT '[]'",
             "ALTER TABLE cms_pages ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE cms_users ADD COLUMN twofa_enabled INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE cms_users ADD COLUMN twofa_totp_secret TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE cms_users ADD COLUMN twofa_mijauth_key TEXT",
+            "ALTER TABLE cms_users ADD COLUMN twofa_mijauth_token TEXT",
         ] as $sql) {
             try {
                 $db->exec($sql);
@@ -309,7 +325,7 @@ function cms_init_db(PDO $db): void
         ['site_name', 'My CMS'],
         ['site_tagline', 'Nowy system CMS oparty o portfolio'],
         ['theme', 'default'],
-        ['cms_core_version', '1.0.3'],
+        ['cms_core_version', '1.0.4'],
         ['site_mode', 'multipage'],
         ['theme_variant', 'multipage'],
         ['site_default_language', 'pl'],

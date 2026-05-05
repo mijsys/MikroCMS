@@ -4,7 +4,7 @@ declare(strict_types=1);
 const CMS_DEFAULT_UPDATE_MANIFEST_URL = 'https://raw.githubusercontent.com/mijsys/MikroCMS/main/updates/cms-update.json';
 const CMS_DEFAULT_STORE_MANIFEST_URL = 'https://raw.githubusercontent.com/mijsys/MikroCMS/main/updates/store-db.json';
 const CMS_DEFAULT_PLUGIN_MANIFEST_URL = 'https://raw.githubusercontent.com/mijsys/MikroCMS/main/updates/plugins.json';
-const CMS_CODE_VERSION = '1.0.3';
+const CMS_CODE_VERSION = '1.0.4';
 
 function cms_sanitize_remote_manifest_url(string $url): string
 {
@@ -142,4 +142,246 @@ function cms_core_update_download_url(array $coreUpdateInfo): string
 
     $url = (string) ($manifest['download_url'] ?? '');
     return cms_sanitize_remote_manifest_url($url);
+}
+
+function cms_core_temp_dir(): string
+{
+    $dir = __DIR__ . '/../storage/tmp';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0750, true);
+    }
+    return $dir;
+}
+
+function cms_core_delete_path(string $path): void
+{
+    if (is_link($path) || is_file($path)) {
+        @unlink($path);
+        return;
+    }
+
+    if (!is_dir($path)) {
+        return;
+    }
+
+    $items = scandir($path);
+    if (!is_array($items)) {
+        return;
+    }
+
+    foreach ($items as $item) {
+        if ($item === '.' || $item === '..') {
+            continue;
+        }
+        cms_core_delete_path($path . '/' . $item);
+    }
+
+    @rmdir($path);
+}
+
+function cms_core_copy_path(string $source, string $destination): void
+{
+    if (is_file($source)) {
+        $destDir = dirname($destination);
+        if (!is_dir($destDir) && !mkdir($destDir, 0750, true) && !is_dir($destDir)) {
+            throw new RuntimeException('Nie mozna utworzyc katalogu docelowego aktualizacji.');
+        }
+        if (!copy($source, $destination)) {
+            throw new RuntimeException('Nie mozna skopiowac pliku aktualizacji core.');
+        }
+        return;
+    }
+
+    if (!is_dir($source)) {
+        throw new RuntimeException('Brak zrodla do kopiowania aktualizacji core.');
+    }
+
+    if (!is_dir($destination) && !mkdir($destination, 0750, true) && !is_dir($destination)) {
+        throw new RuntimeException('Nie mozna utworzyc katalogu aktualizacji core.');
+    }
+
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($source, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST
+    );
+
+    foreach ($iterator as $item) {
+        $targetPath = $destination . '/' . $iterator->getSubPathName();
+        if ($item->isDir()) {
+            if (!is_dir($targetPath)) {
+                mkdir($targetPath, 0750, true);
+            }
+            continue;
+        }
+        $targetDir = dirname($targetPath);
+        if (!is_dir($targetDir)) {
+            mkdir($targetDir, 0750, true);
+        }
+        if (!copy((string) $item, $targetPath)) {
+            throw new RuntimeException('Nie mozna skopiowac plikow aktualizacji core.');
+        }
+    }
+}
+
+function cms_core_find_project_root_in_extracted(string $extractDir): string
+{
+    if (is_file($extractDir . '/index.php') && is_file($extractDir . '/includes/bootstrap.php')) {
+        return $extractDir;
+    }
+
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($extractDir, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST
+    );
+
+    foreach ($iterator as $item) {
+        if (!$item->isDir()) {
+            continue;
+        }
+        $candidate = (string) $item->getPathname();
+        if (is_file($candidate . '/index.php') && is_file($candidate . '/includes/bootstrap.php')) {
+            return $candidate;
+        }
+    }
+
+    throw new RuntimeException('Paczka aktualizacji CMS nie zawiera poprawnego rdzenia projektu.');
+}
+
+function cms_install_or_update_core_from_manifest(): array
+{
+    $coreUpdate = cms_core_update_info();
+    if (empty($coreUpdate['has_update'])) {
+        throw new RuntimeException('Brak nowej aktualizacji CMS do instalacji.');
+    }
+
+    $downloadUrl = cms_core_update_download_url($coreUpdate);
+    if ($downloadUrl === '') {
+        throw new RuntimeException('Manifest aktualizacji nie zawiera poprawnego download_url.');
+    }
+
+    if (!class_exists('ZipArchive')) {
+        throw new RuntimeException('Brak rozszerzenia ZipArchive na serwerze.');
+    }
+
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 30,
+            'user_agent' => 'MikroCMS-CoreUpdater/1.0',
+            'header' => "Cache-Control: no-cache\r\nPragma: no-cache\r\n",
+        ],
+        'ssl' => [
+            'verify_peer' => true,
+            'verify_peer_name' => true,
+        ],
+    ]);
+
+    $zipRaw = @file_get_contents($downloadUrl, false, $context);
+    if ($zipRaw === false || $zipRaw === '') {
+        throw new RuntimeException('Nie udalo sie pobrac paczki aktualizacji CMS.');
+    }
+
+    $tmpBase = cms_core_temp_dir() . '/core-update-' . bin2hex(random_bytes(4));
+    $zipFile = $tmpBase . '.zip';
+    $extractDir = $tmpBase . '-extract';
+    $backupDir = $tmpBase . '-backup';
+    file_put_contents($zipFile, $zipRaw);
+    mkdir($extractDir, 0750, true);
+    mkdir($backupDir, 0750, true);
+
+    $zip = new ZipArchive();
+    if ($zip->open($zipFile) !== true) {
+        @unlink($zipFile);
+        cms_core_delete_path($extractDir);
+        cms_core_delete_path($backupDir);
+        throw new RuntimeException('Pobrana paczka CMS nie jest poprawnym ZIP.');
+    }
+
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $entryName = (string) $zip->getNameIndex($i);
+        if ($entryName === '') {
+            continue;
+        }
+        if (str_starts_with($entryName, '/') || str_contains($entryName, '..')) {
+            $zip->close();
+            @unlink($zipFile);
+            cms_core_delete_path($extractDir);
+            cms_core_delete_path($backupDir);
+            throw new RuntimeException('Paczka aktualizacji CMS zawiera niedozwolone sciezki.');
+        }
+    }
+
+    $zip->extractTo($extractDir);
+    $zip->close();
+    @unlink($zipFile);
+
+    $targetRoot = realpath(__DIR__ . '/..');
+    if (!is_string($targetRoot) || $targetRoot === '') {
+        cms_core_delete_path($extractDir);
+        cms_core_delete_path($backupDir);
+        throw new RuntimeException('Nie mozna ustalic katalogu glownego CMS.');
+    }
+
+    $sourceRoot = cms_core_find_project_root_in_extracted($extractDir);
+    $protected = ['.git', 'storage', 'uploads', 'data'];
+
+    $entries = scandir($sourceRoot);
+    if (!is_array($entries)) {
+        cms_core_delete_path($extractDir);
+        cms_core_delete_path($backupDir);
+        throw new RuntimeException('Nie mozna odczytac paczki aktualizacji CMS.');
+    }
+
+    $copyEntries = [];
+    foreach ($entries as $entry) {
+        if ($entry === '.' || $entry === '..' || in_array($entry, $protected, true)) {
+            continue;
+        }
+        $copyEntries[] = $entry;
+    }
+
+    $existingBefore = [];
+
+    try {
+        foreach ($copyEntries as $entry) {
+            $targetPath = $targetRoot . '/' . $entry;
+            $backupPath = $backupDir . '/' . $entry;
+            $existingBefore[$entry] = file_exists($targetPath);
+
+            if ($existingBefore[$entry]) {
+                cms_core_copy_path($targetPath, $backupPath);
+            }
+        }
+
+        foreach ($copyEntries as $entry) {
+            $sourcePath = $sourceRoot . '/' . $entry;
+            $targetPath = $targetRoot . '/' . $entry;
+            if (file_exists($targetPath)) {
+                cms_core_delete_path($targetPath);
+            }
+            cms_core_copy_path($sourcePath, $targetPath);
+        }
+
+        $remoteVersion = (string) ($coreUpdate['remote_version'] ?? CMS_CODE_VERSION);
+        cms_set_setting('cms_core_version', $remoteVersion);
+
+        return [
+            'from' => (string) ($coreUpdate['current_version'] ?? ''),
+            'to' => $remoteVersion,
+            'download_url' => $downloadUrl,
+        ];
+    } catch (Throwable $e) {
+        foreach ($copyEntries as $entry) {
+            $targetPath = $targetRoot . '/' . $entry;
+            $backupPath = $backupDir . '/' . $entry;
+            cms_core_delete_path($targetPath);
+
+            if (!empty($existingBefore[$entry]) && file_exists($backupPath)) {
+                cms_core_copy_path($backupPath, $targetPath);
+            }
+        }
+        throw $e;
+    } finally {
+        cms_core_delete_path($extractDir);
+        cms_core_delete_path($backupDir);
+    }
 }
