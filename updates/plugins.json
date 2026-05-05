@@ -1,0 +1,13 @@
+{
+  "plugins": [
+    {
+      "slug": "hello-world",
+      "name": "Hello World",
+      "version": "1.0.0",
+      "description": "Przykladowy plugin startowy.",
+      "repository": "https://github.com/mijsys/MikroCMS",
+      "homepage": "https://github.com/mijsys/MikroCMS/tree/main/plugins/hello-world",
+      "download_url": "https://github.com/mijsys/MikroCMS/archive/refs/heads/main.zip"
+    }
+  ]
+}
