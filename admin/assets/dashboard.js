@@ -58,6 +58,39 @@ applyAll();
 }());
 (function(){'use strict';var list=document.getElementById('builderList');var hidden=document.getElementById('builderDataInput');if(!list||!hidden){return;}var initial=Array.isArray(window.CMS_BUILDER_BLOCKS)?window.CMS_BUILDER_BLOCKS:[];function esc(v){return String(v||'').replace(/[&<>"']/g,function(ch){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch];});}function blockData(type){return{type:type||'text',title:'',text:'',background_color:'#ffffff',background_image:'',background_attachment:'scroll',min_height:'420',align:'left',button_text:'',button_url:'',image_url:'',image_alt:''};}function row(type,data){var block=Object.assign(blockData(type),data||{});var item=document.createElement('div');item.className='builder-item';item.draggable=true;item.innerHTML=''+ '<div class="builder-head">'+ '<div><span class="builder-handle">Przeciagnij</span> <strong>'+esc(block.type.toUpperCase())+'</strong></div>'+ '<button type="button" class="btn danger" data-remove-block>Usun blok</button>'+ '</div>'+ '<div class="builder-fields">'+ '<div><label>Typ bloku</label><select data-field="type"><option value="hero">Hero</option><option value="text">Text</option><option value="image">Image</option></select></div>'+ '<div><label>Wyrownanie</label><select data-field="align"><option value="left">Lewo</option><option value="center">Srodek</option><option value="right">Prawo</option></select></div>'+ '<div><label>Tytul</label><input type="text" data-field="title" value="'+esc(block.title)+'"></div>'+ '<div><label>Minimalna wysokosc</label><input type="number" min="200" max="1200" step="10" data-field="min_height" value="'+esc(block.min_height)+'"></div>'+ '<div class="full"><label>Tekst</label><textarea data-field="text">'+esc(block.text)+'</textarea></div>'+ '<div><label>Kolor tla</label><input type="color" data-field="background_color" value="'+esc(block.background_color)+'"></div>'+ '<div><label>Zachowanie tla</label><select data-field="background_attachment"><option value="scroll">Przewija sie</option><option value="fixed">Nieruchome</option></select></div>'+ '<div class="full"><label>Adres obrazka tla</label><input type="url" data-field="background_image" value="'+esc(block.background_image)+'" placeholder="https://..."></div>'+ '<div><label>Tekst przycisku</label><input type="text" data-field="button_text" value="'+esc(block.button_text)+'"></div>'+ '<div><label>URL przycisku</label><input type="url" data-field="button_url" value="'+esc(block.button_url)+'" placeholder="https://..."></div>'+ '<div><label>Adres obrazka elementu</label><input type="url" data-field="image_url" value="'+esc(block.image_url)+'" placeholder="https://..."></div>'+ '<div><label>ALT obrazka</label><input type="text" data-field="image_alt" value="'+esc(block.image_alt)+'"></div>'+ '</div>';item.querySelector('[data-field="type"]').value=block.type;item.querySelector('[data-field="align"]').value=block.align;item.querySelector('[data-field="background_attachment"]').value=block.background_attachment;bind(item);return item;}function sync(){var payload=[];list.querySelectorAll('.builder-item').forEach(function(item){var data={};item.querySelectorAll('[data-field]').forEach(function(field){data[field.getAttribute('data-field')]=field.value;});payload.push(data);});hidden.value=JSON.stringify(payload);}function bind(item){item.querySelectorAll('[data-field]').forEach(function(field){field.addEventListener('input',sync);field.addEventListener('change',sync);});item.querySelector('[data-remove-block]').addEventListener('click',function(){item.remove();renderEmpty();sync();});item.addEventListener('dragstart',function(){item.classList.add('dragging');});item.addEventListener('dragend',function(){item.classList.remove('dragging');sync();});}function renderEmpty(){var empty=document.getElementById('builderEmpty');if(!empty){return;}empty.style.display=list.querySelector('.builder-item')?'none':'block';}list.addEventListener('dragover',function(e){e.preventDefault();var dragging=list.querySelector('.builder-item.dragging');if(!dragging){return;}var after=[].slice.call(list.querySelectorAll('.builder-item:not(.dragging)')).find(function(el){var rect=el.getBoundingClientRect();return e.clientY<rect.top+rect.height/2;});if(after){list.insertBefore(dragging,after);}else{list.appendChild(dragging);}});document.querySelectorAll('[data-add-block]').forEach(function(btn){btn.addEventListener('click',function(){list.appendChild(row(btn.getAttribute('data-add-block')));renderEmpty();sync();});});if(initial.length){initial.forEach(function(item){list.appendChild(row(item.type||'text',item));});}renderEmpty();sync();var form=document.getElementById('pageEditorForm');if(form){form.addEventListener('submit',sync);}}());
 
+// ── Sidebar toggle ────────────────────────────────────────────────────────────
+(function () {
+    'use strict';
+    var layout = document.querySelector('.layout');
+    var sidebar = document.querySelector('.sidebar');
+    var btn = document.getElementById('sidebarToggleBtn');
+    if (!layout || !sidebar || !btn) { return; }
+
+    function apply(hidden) {
+        if (hidden) {
+            layout.classList.add('sidebar-hidden');
+            sidebar.classList.add('collapsed');
+            sidebar.style.overflow = 'hidden';
+            btn.title = 'Pokaz panel boczny';
+            btn.innerHTML = '&#8250;';
+        } else {
+            layout.classList.remove('sidebar-hidden');
+            sidebar.classList.remove('collapsed');
+            setTimeout(function () { sidebar.style.overflow = ''; }, 260);
+            btn.title = 'Ukryj panel boczny';
+            btn.innerHTML = '&#8249;';
+        }
+    }
+
+    apply(localStorage.getItem('cms_sidebar_hidden') === '1');
+
+    btn.addEventListener('click', function () {
+        var nowHidden = !sidebar.classList.contains('collapsed');
+        localStorage.setItem('cms_sidebar_hidden', nowHidden ? '1' : '0');
+        apply(nowHidden);
+    });
+}());
+
 (function(){'use strict';
 var placementList=document.getElementById('placementList');
 var placementInput=document.getElementById('placementsInput');

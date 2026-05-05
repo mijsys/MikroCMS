@@ -102,6 +102,7 @@
             payload.push(data);
         });
         hidden.value = JSON.stringify(payload);
+        document.dispatchEvent(new CustomEvent('cms:builder:change'));
     }
 
     function bindItem(item) {
@@ -221,4 +222,133 @@
     if (form) {
         form.addEventListener('submit', sync);
     }
+
+    // Expose for draft restore
+    window.cmsBuilderLoad = function (blocks) {
+        list.innerHTML = '';
+        if (Array.isArray(blocks)) {
+            blocks.forEach(function (item) {
+                list.appendChild(makeItem(item.type || 'text', item));
+            });
+        }
+        renderEmpty();
+        sync();
+    };
+}());
+
+// ── Auto-save draft + page preview ───────────────────────────────────────────
+(function () {
+    'use strict';
+    var form = document.getElementById('pageEditorForm');
+    if (!form) { return; }
+
+    var draftKey = typeof window.CMS_DRAFT_KEY === 'string' ? window.CMS_DRAFT_KEY : null;
+    var previewUrl = typeof window.CMS_PAGE_PREVIEW_URL === 'string' ? window.CMS_PAGE_PREVIEW_URL : '';
+    var autosaveBadge = document.getElementById('autosaveBadge');
+    var isDirty = false;
+
+    function getFormSnapshot() {
+        var snap = {};
+        Array.prototype.forEach.call(form.elements, function (el) {
+            if (!el.name) { return; }
+            snap[el.name] = el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value;
+        });
+        return JSON.stringify(snap);
+    }
+
+    function setBadge(state, text) {
+        if (!autosaveBadge) { return; }
+        autosaveBadge.className = 'autosave-badge' + (state ? ' ' + state : '');
+        autosaveBadge.textContent = text;
+    }
+
+    function markDirty() {
+        isDirty = true;
+        if (!draftKey) { return; }
+        try { localStorage.setItem(draftKey, getFormSnapshot()); } catch (e) { /* quota */ }
+        setBadge('dirty', '\u25cf Niezapisane zmiany');
+    }
+
+    // ── Restore draft on page load ────────────────────────────────────────────
+    if (draftKey) {
+        var saved = null;
+        try { saved = localStorage.getItem(draftKey); } catch (e) {}
+        if (saved) {
+            try {
+                var snap = JSON.parse(saved);
+                var skip = { csrf_token: 1, action: 1, page_id: 1, edit_lang: 1 };
+                Object.keys(snap).forEach(function (k) {
+                    if (skip[k] || k === 'builder_data') { return; }
+                    var el = form.querySelector('[name="' + k + '"]');
+                    if (!el) { return; }
+                    if (el.type === 'checkbox') {
+                        el.checked = snap[k] === '1';
+                    } else {
+                        el.value = snap[k];
+                    }
+                });
+                if (snap.builder_data && typeof window.cmsBuilderLoad === 'function') {
+                    try {
+                        var blocks = JSON.parse(snap.builder_data);
+                        if (Array.isArray(blocks)) { window.cmsBuilderLoad(blocks); }
+                    } catch (e) {}
+                }
+                setBadge('dirty', '\u25cf Odzyskano szkic \u2014 zapisz aby zachowac');
+                isDirty = true;
+            } catch (e) {}
+        }
+    }
+
+    // ── Dirty tracking ────────────────────────────────────────────────────────
+    form.addEventListener('input', markDirty);
+    form.addEventListener('change', markDirty);
+    document.addEventListener('cms:builder:change', markDirty);
+
+    form.addEventListener('submit', function () {
+        if (draftKey) { try { localStorage.removeItem(draftKey); } catch (e) {} }
+        isDirty = false;
+        setBadge('saved', '\u2713 Zapisano');
+    });
+
+    window.addEventListener('beforeunload', function (e) {
+        if (isDirty) { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    // Ctrl+S / Cmd+S — quick save
+    document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
+        }
+    });
+
+    // ── Preview overlay ───────────────────────────────────────────────────────
+    var previewBtn     = document.getElementById('pagePreviewBtn');
+    var previewOverlay = document.getElementById('pagePreviewOverlay');
+    var previewFrame   = document.getElementById('pagePreviewFrame');
+    var previewClose   = document.getElementById('pagePreviewClose');
+
+    function openPreview() {
+        if (!previewUrl) {
+            // eslint-disable-next-line no-alert
+            alert('Zapisz strone i upewnij sie, ze ma slug, aby uzyc podgladu.');
+            return;
+        }
+        if (previewFrame) { previewFrame.src = previewUrl; }
+        if (previewOverlay) { previewOverlay.classList.add('open'); }
+    }
+
+    function closePreview() {
+        if (previewOverlay) { previewOverlay.classList.remove('open'); }
+        if (previewFrame) { setTimeout(function () { previewFrame.src = ''; }, 200); }
+    }
+
+    if (previewBtn) { previewBtn.addEventListener('click', openPreview); }
+    if (previewClose) { previewClose.addEventListener('click', closePreview); }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && previewOverlay && previewOverlay.classList.contains('open')) {
+            closePreview();
+        }
+    });
 }());
