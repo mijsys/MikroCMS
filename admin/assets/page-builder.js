@@ -78,7 +78,15 @@
                 '<div><label>Adres obrazka elementu</label><input type="url" data-field="image_url" value="' + esc(block.image_url) + '" placeholder="https://..."></div>' +
                 '<div><label>ALT obrazka</label><input type="text" data-field="image_alt" value="' + esc(block.image_alt) + '"></div>' +
                 '<div><label>Kolumny kontenera</label><select data-field="container_columns"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>' +
-                '<div class="full"><label>Elementy kontenera (JSON)</label><textarea data-field="container_items_json" placeholder="[{\"title\":\"...\",\"text\":\"...\"}]">' + esc(block.container_items_json) + '</textarea></div>' +
+                '<div class="full">' +
+                    '<label>Elementy kontenera (karty / przyciski)</label>' +
+                    '<div class="container-editor" data-container-editor>' +
+                        '<div class="container-editor-toolbar"><button type="button" class="btn ghost" data-container-add-item>+ Dodaj element</button></div>' +
+                        '<div class="container-editor-empty" data-container-editor-empty>Brak elementow kontenera.</div>' +
+                        '<div class="container-editor-list" data-container-editor-list></div>' +
+                    '</div>' +
+                    '<textarea data-field="container_items_json" data-container-raw style="display:none" placeholder="[{\"title\":\"...\",\"text\":\"...\"}]">' + esc(block.container_items_json) + '</textarea>' +
+                '</div>' +
                 '<div class="full"><label>URL obrazkow galerii (po jednym w linii)</label><textarea data-field="gallery_urls" placeholder="https://...\nhttps://...">' + esc(block.gallery_urls) + '</textarea></div>' +
                 '<div><label>Slug pluginu (slot)</label><input type="text" data-field="plugin_slug" value="' + esc(block.plugin_slug) + '" placeholder="np. comments"></div>' +
             '</div>';
