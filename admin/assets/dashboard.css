@@ -211,6 +211,21 @@ h3 {
 	flex-wrap: wrap;
 }
 
+.inline {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	border-radius: 10px;
+	border: 1px solid rgba(113, 157, 188, 0.28);
+	background: rgba(12, 31, 47, 0.6);
+	color: #d6ecff;
+}
+
+.inline input[type="checkbox"] {
+	accent-color: var(--accent);
+}
+
 .btn {
 	border: none;
 	border-radius: 12px;
@@ -545,6 +560,19 @@ td small {
 	gap: 10px;
 }
 
+.placement-item select[data-field="position"] {
+	min-width: 170px;
+	color: var(--text);
+	background: linear-gradient(180deg, rgba(8, 23, 35, 0.98), rgba(8, 20, 31, 0.92));
+	border: 1px solid rgba(107, 156, 190, 0.42);
+	border-radius: 10px;
+	padding: 9px 11px;
+}
+
+.placement-item .inline {
+	white-space: nowrap;
+}
+
 .placement-item .muted,
 .tiny,
 .page-path,
@@ -691,6 +719,67 @@ td small {
 	font-weight: 700;
 	color: #1a8aa8;
 	cursor: grab;
+}
+
+.topbar .actions label {
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.topbar .actions select,
+#langSwitcher {
+	min-width: 150px;
+	color: var(--text);
+	background: linear-gradient(180deg, rgba(8, 23, 35, 0.98), rgba(8, 20, 31, 0.92));
+	border: 1px solid rgba(107, 156, 190, 0.42);
+	border-radius: 10px;
+	padding: 9px 12px;
+}
+
+.accordion {
+	display: grid;
+	gap: 10px;
+	margin-bottom: 12px;
+}
+
+.accordion details {
+	border: 1px solid rgba(123, 176, 213, 0.26);
+	border-radius: 12px;
+	background: rgba(10, 31, 47, 0.62);
+	overflow: hidden;
+}
+
+.accordion details[open] {
+	box-shadow: inset 0 0 0 1px rgba(25, 165, 185, 0.25);
+}
+
+.accordion summary {
+	list-style: none;
+	cursor: pointer;
+	padding: 12px 14px;
+	font-weight: 700;
+	color: #d8edff;
+	border-bottom: 1px solid rgba(123, 176, 213, 0.2);
+	background: rgba(12, 34, 52, 0.78);
+}
+
+.accordion summary::-webkit-details-marker {
+	display: none;
+}
+
+.accordion summary::after {
+	content: '+';
+	float: right;
+	color: #8dddee;
+	font-weight: 800;
+}
+
+.accordion details[open] summary::after {
+	content: '-';
+}
+
+.accordion .accordion-body {
+	padding: 12px 14px 6px;
 }
 
 .prev-header {

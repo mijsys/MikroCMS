@@ -162,24 +162,38 @@ foreach ($pages as $pageItem) {
                             <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.sort', 'Kolejnosc')) ?></label><input type="number" name="sort_order" value="<?= htmlspecialchars((string) ($editPage['sort_order'] ?? '0')) ?>"></div>
                         </div>
 
-                        <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.excerpt', 'Lead / zajawka')) ?></label><textarea name="excerpt"><?= htmlspecialchars($editPage['excerpt'] ?? '') ?></textarea></div>
-                        <div class="split">
-                            <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.meta_title', 'SEO: Meta title')) ?></label><input type="text" name="meta_title" maxlength="191" placeholder="<?= htmlspecialchars(cms_t('admin.pages.form.meta_title.ph', 'Opcjonalnie - inny tytul dla SEO')) ?>" value="<?= htmlspecialchars($editPage['meta_title'] ?? '') ?>"></div>
-                            <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.meta_description', 'SEO: Meta description')) ?></label><input type="text" name="meta_description" maxlength="320" placeholder="<?= htmlspecialchars(cms_t('admin.pages.form.meta_description.ph', 'Opcjonalnie - opis dla Google i social')) ?>" value="<?= htmlspecialchars($editPage['meta_description'] ?? '') ?>"></div>
+                        <div class="accordion">
+                            <details open>
+                                <summary><?= htmlspecialchars(cms_t('admin.pages.form.section.content_seo', 'Tresc i SEO')) ?></summary>
+                                <div class="accordion-body">
+                                    <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.excerpt', 'Lead / zajawka')) ?></label><textarea name="excerpt"><?= htmlspecialchars($editPage['excerpt'] ?? '') ?></textarea></div>
+                                    <div class="split">
+                                        <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.meta_title', 'SEO: Meta title')) ?></label><input type="text" name="meta_title" maxlength="191" placeholder="<?= htmlspecialchars(cms_t('admin.pages.form.meta_title.ph', 'Opcjonalnie - inny tytul dla SEO')) ?>" value="<?= htmlspecialchars($editPage['meta_title'] ?? '') ?>"></div>
+                                        <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.meta_description', 'SEO: Meta description')) ?></label><input type="text" name="meta_description" maxlength="320" placeholder="<?= htmlspecialchars(cms_t('admin.pages.form.meta_description.ph', 'Opcjonalnie - opis dla Google i social')) ?>" value="<?= htmlspecialchars($editPage['meta_description'] ?? '') ?>"></div>
+                                    </div>
+                                    <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.content', 'Tresc dodatkowa (fallback)')) ?></label><textarea name="content"><?= htmlspecialchars($editPage['content'] ?? '') ?></textarea></div>
+                                </div>
+                            </details>
                         </div>
-                        <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.content', 'Tresc dodatkowa (fallback)')) ?></label><textarea name="content"><?= htmlspecialchars($editPage['content'] ?? '') ?></textarea></div>
 
                         <div class="split">
                             <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.status', 'Status')) ?></label><select name="status"><option value="draft" <?= (($editPage['status'] ?? '') === 'draft') ? 'selected' : '' ?>><?= htmlspecialchars(cms_t('admin.pages.form.status.draft', 'Szkic')) ?></option><option value="published" <?= (($editPage['status'] ?? '') === 'published') ? 'selected' : '' ?>><?= htmlspecialchars(cms_t('admin.pages.form.status.published', 'Opublikowana')) ?></option></select></div>
                             <div class="field inline"><label><input type="checkbox" name="is_homepage" value="1" <?= !empty($editPage['is_homepage']) ? 'checked' : '' ?>> <?= htmlspecialchars(cms_t('admin.pages.form.home', 'Ustaw jako strone glowna')) ?></label></div>
                         </div>
 
-                        <div class="field">
-                            <label><?= htmlspecialchars(cms_t('admin.pages.form.builder', 'Builder wygladu strony')) ?></label>
-                            <div class="tiny"><?= htmlspecialchars(cms_t('admin.pages.form.builder_help', 'Dodawaj bloki, przeciagnij aby zmienic kolejnosc, eksportuj/importuj JSON i dziel gotowe uklady.')) ?></div>
-                            <div class="tiny" style="margin-top:6px"><?= htmlspecialchars(cms_t('admin.pages.form.builder_help_easy', 'Tryb wizualny: otworz okno kreatora i ukladaj sekcje metoda drag and drop bez znajomosci kodu.')) ?></div>
+                        <div class="accordion">
+                            <details open>
+                                <summary><?= htmlspecialchars(cms_t('admin.pages.form.section.builder', 'Builder i sekcje strony')) ?></summary>
+                                <div class="accordion-body">
+                                    <div class="field">
+                                        <label><?= htmlspecialchars(cms_t('admin.pages.form.builder', 'Builder wygladu strony')) ?></label>
+                                        <div class="tiny"><?= htmlspecialchars(cms_t('admin.pages.form.builder_help', 'Dodawaj bloki, przeciagnij aby zmienic kolejnosc, eksportuj/importuj JSON i dziel gotowe uklady.')) ?></div>
+                                        <div class="tiny" style="margin-top:6px"><?= htmlspecialchars(cms_t('admin.pages.form.builder_help_easy', 'Tryb wizualny: otworz okno kreatora i ukladaj sekcje metoda drag and drop bez znajomosci kodu.')) ?></div>
+                                    </div>
+                                    <button class="btn" type="button" id="openBuilderWindowBtn" style="margin-bottom:12px"><?= htmlspecialchars(cms_t('admin.pages.form.open_builder_window', 'Otworz okno kreatora strony')) ?></button>
+                                </div>
+                            </details>
                         </div>
-                        <button class="btn" type="button" id="openBuilderWindowBtn" style="margin-bottom:12px"><?= htmlspecialchars(cms_t('admin.pages.form.open_builder_window', 'Otworz okno kreatora strony')) ?></button>
 
                         <div id="builderWindowBackdrop" class="builder-window-backdrop"></div>
                         <div id="builderWindowShell" class="builder-window-shell" role="dialog" aria-modal="true" aria-label="<?= htmlspecialchars(cms_t('admin.pages.form.builder', 'Builder wygladu strony')) ?>">
