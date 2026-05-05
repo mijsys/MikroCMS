@@ -1,0 +1,9 @@
+{
+  "slug": "comments",
+  "name": "Comments Plugin",
+  "version": "1.0.0",
+  "description": "Komentarze do stron CMS (formularz + lista komentarzy).",
+  "entry": "bootstrap.php",
+  "homepage": "https://github.com/mijsys/MikroCMS",
+  "source": "local"
+}

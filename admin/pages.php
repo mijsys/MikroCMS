@@ -94,7 +94,7 @@ foreach ($pages as $pageItem) {
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
                         <input type="hidden" name="action" value="save_page">
                         <input type="hidden" name="page_id" value="<?= htmlspecialchars((string) ($editPage['id'] ?? '')) ?>">
-                        <input type="hidden" name="builder_data" id="builderDataInput" value="<?= htmlspecialchars(json_encode($builderBlocks, JSON_UNESCAPED_UNICODE)) ?>">
+                        <input type="hidden" name="builder_data" id="builderDataInputV2" value="<?= htmlspecialchars(json_encode($builderBlocks, JSON_UNESCAPED_UNICODE)) ?>">
 
                         <div class="split">
                             <div class="field"><label>Tytul</label><input type="text" name="title" required value="<?= htmlspecialchars($editPage['title'] ?? '') ?>"></div>
@@ -125,15 +125,21 @@ foreach ($pages as $pageItem) {
 
                         <div class="field">
                             <label>Builder wygladu strony</label>
-                            <div class="tiny">Dodawaj bloki i przeciagnij elementy aby zmienic kolejnosc.</div>
+                            <div class="tiny">Dodawaj bloki, przeciagnij aby zmienic kolejnosc, eksportuj/importuj JSON i dziel gotowe uklady.</div>
                         </div>
                         <div class="builder-toolbar">
-                            <button class="btn ghost" type="button" data-add-block="hero">+ Hero</button>
-                            <button class="btn ghost" type="button" data-add-block="text">+ Text</button>
-                            <button class="btn ghost" type="button" data-add-block="image">+ Image</button>
+                            <button class="btn ghost" type="button" data-builder2-add="hero">+ Hero</button>
+                            <button class="btn ghost" type="button" data-builder2-add="text">+ Text</button>
+                            <button class="btn ghost" type="button" data-builder2-add="image">+ Image</button>
+                            <button class="btn ghost" type="button" data-builder2-add="container">+ Container</button>
+                            <button class="btn ghost" type="button" data-builder2-add="gallery">+ Gallery</button>
+                            <button class="btn ghost" type="button" data-builder2-add="plugin_slot">+ Plugin Slot</button>
+                            <button class="btn secondary" type="button" id="builderExportBtn">Eksport JSON</button>
+                            <label class="btn secondary" for="builderImportFile" style="display:inline-flex;align-items:center;cursor:pointer">Import JSON</label>
+                            <input id="builderImportFile" type="file" accept="application/json,.json" style="display:none">
                         </div>
-                        <div id="builderEmpty" class="builder-empty">Builder jest pusty. Dodaj pierwszy blok.</div>
-                        <div id="builderList" class="builder-list"></div>
+                        <div id="builderEmptyV2" class="builder-empty">Builder jest pusty. Dodaj pierwszy blok.</div>
+                        <div id="builderListV2" class="builder-list"></div>
 
                         <div class="actions" style="margin-top:18px"><button class="btn" type="submit">Zapisz strone</button><a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>">Wyczysc formularz</a></div>
                     </form>
@@ -179,5 +185,6 @@ foreach ($pages as $pageItem) {
 </div>
 <script>window.CMS_BUILDER_BLOCKS = <?= json_encode($builderBlocks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;</script>
 <script src="<?= htmlspecialchars(cms_url('admin/assets/dashboard.js')) ?>"></script>
+<script src="<?= htmlspecialchars(cms_url('admin/assets/page-builder.js')) ?>"></script>
 </body>
 </html>

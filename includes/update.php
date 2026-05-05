@@ -4,6 +4,7 @@ declare(strict_types=1);
 const CMS_DEFAULT_UPDATE_MANIFEST_URL = 'https://raw.githubusercontent.com/mijsys/MikroCMS/main/updates/cms-update.json';
 const CMS_DEFAULT_STORE_MANIFEST_URL = 'https://raw.githubusercontent.com/mijsys/MikroCMS/main/updates/store-db.json';
 const CMS_DEFAULT_PLUGIN_MANIFEST_URL = 'https://raw.githubusercontent.com/mijsys/MikroCMS/main/updates/plugins.json';
+const CMS_CODE_VERSION = '1.0.2';
 
 function cms_sanitize_remote_manifest_url(string $url): string
 {
@@ -41,10 +42,16 @@ function cms_fetch_remote_json(string $url, int $timeout = 5): ?array
         return null;
     }
 
+    // Unikamy stalego cache CDN/proxy dla manifestow aktualizacji.
+    $cacheBustedUrl = $url
+        . (str_contains($url, '?') ? '&' : '?')
+        . 'cb=' . rawurlencode(CMS_CODE_VERSION . '-' . gmdate('YmdHi'));
+
     $context = stream_context_create([
         'http' => [
             'timeout' => max(2, $timeout),
             'user_agent' => 'PortfolioCMS/1.0',
+            'header' => "Cache-Control: no-cache\r\nPragma: no-cache\r\n",
         ],
         'ssl' => [
             'verify_peer' => true,
@@ -52,7 +59,7 @@ function cms_fetch_remote_json(string $url, int $timeout = 5): ?array
         ],
     ]);
 
-    $raw = @file_get_contents($url, false, $context);
+    $raw = @file_get_contents($cacheBustedUrl, false, $context);
     if ($raw === false || trim($raw) === '') {
         return null;
     }
@@ -86,7 +93,16 @@ function cms_normalize_version_string(string $version, string $fallback = '0.0.0
 
 function cms_core_version(): string
 {
-    return cms_normalize_version_string(cms_get_setting('cms_core_version', '1.0.1'), '1.0.1');
+    $settingVersion = cms_normalize_version_string(cms_get_setting('cms_core_version', CMS_CODE_VERSION), CMS_CODE_VERSION);
+    $codeVersion = cms_normalize_version_string(CMS_CODE_VERSION, '0.0.0');
+
+    // Chroni przed starym wpisem w DB po wdrozeniu nowej wersji kodu.
+    if (version_compare($codeVersion, $settingVersion, '>')) {
+        cms_set_setting('cms_core_version', $codeVersion);
+        return $codeVersion;
+    }
+
+    return $settingVersion;
 }
 
 function cms_core_update_info(): array

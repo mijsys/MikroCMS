@@ -336,6 +336,10 @@ function cms_builder_block_defaults(string $type = 'text'): array
         'button_url' => '',
         'image_url' => '',
         'image_alt' => '',
+        'gallery_urls' => '',
+        'container_columns' => '2',
+        'container_items_json' => "[\n  {\"title\":\"Karta 1\",\"text\":\"Opis elementu\"},\n  {\"title\":\"Karta 2\",\"text\":\"Opis elementu\"}\n]",
+        'plugin_slug' => '',
     ];
 }
 
@@ -353,7 +357,7 @@ function cms_normalize_builder_blocks(mixed $input): array
         if (!is_array($item)) {
             continue;
         }
-        $type = in_array(($item['type'] ?? 'text'), ['hero', 'text', 'image'], true) ? $item['type'] : 'text';
+        $type = in_array(($item['type'] ?? 'text'), ['hero', 'text', 'image', 'container', 'gallery', 'plugin_slot'], true) ? $item['type'] : 'text';
         $block = cms_builder_block_defaults($type);
         $block['title'] = trim((string) ($item['title'] ?? ''));
         $block['text'] = trim((string) ($item['text'] ?? ''));
@@ -366,6 +370,41 @@ function cms_normalize_builder_blocks(mixed $input): array
         $block['button_url'] = cms_sanitize_url_value((string) ($item['button_url'] ?? ''));
         $block['image_url'] = cms_sanitize_url_value((string) ($item['image_url'] ?? ''));
         $block['image_alt'] = trim((string) ($item['image_alt'] ?? ''));
+
+        $galleryRaw = preg_split('/\r\n|\r|\n/', (string) ($item['gallery_urls'] ?? '')) ?: [];
+        $gallerySanitized = [];
+        foreach ($galleryRaw as $url) {
+            $clean = cms_sanitize_url_value((string) $url);
+            if ($clean !== '') {
+                $gallerySanitized[] = $clean;
+            }
+        }
+        $block['gallery_urls'] = implode("\n", $gallerySanitized);
+
+        $columns = (int) ($item['container_columns'] ?? 2);
+        $block['container_columns'] = (string) max(1, min(4, $columns));
+
+        $containerItemsRaw = (string) ($item['container_items_json'] ?? '[]');
+        $containerItems = json_decode($containerItemsRaw, true);
+        if (!is_array($containerItems)) {
+            $containerItems = [];
+        }
+        $normalizedItems = [];
+        foreach ($containerItems as $containerItem) {
+            if (!is_array($containerItem)) {
+                continue;
+            }
+            $normalizedItems[] = [
+                'title' => trim((string) ($containerItem['title'] ?? '')),
+                'text' => trim((string) ($containerItem['text'] ?? '')),
+                'image' => cms_sanitize_url_value((string) ($containerItem['image'] ?? '')),
+                'button_text' => trim((string) ($containerItem['button_text'] ?? '')),
+                'button_url' => cms_sanitize_url_value((string) ($containerItem['button_url'] ?? '')),
+            ];
+        }
+        $block['container_items_json'] = json_encode($normalizedItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $pluginSlug = trim((string) ($item['plugin_slug'] ?? ''));
+        $block['plugin_slug'] = preg_match('/^[a-z0-9\-]+$/', $pluginSlug) ? $pluginSlug : '';
         $blocks[] = $block;
     }
 
@@ -401,6 +440,43 @@ function cms_render_builder_blocks(array $page): string
                         <img src="<?= htmlspecialchars($block['image_url']) ?>" alt="<?= htmlspecialchars($block['image_alt']) ?>" class="builder-image">
                     </div>
                 <?php endif; ?>
+
+                <?php if ($block['type'] === 'gallery'): ?>
+                    <?php $galleryItems = preg_split('/\r\n|\r|\n/', (string) ($block['gallery_urls'] ?? '')) ?: []; ?>
+                    <?php $galleryItems = array_values(array_filter(array_map('trim', $galleryItems), static fn(string $u): bool => $u !== '')); ?>
+                    <?php if ($galleryItems !== []): ?>
+                        <div class="builder-gallery-grid">
+                            <?php foreach ($galleryItems as $galleryUrl): ?>
+                                <figure class="builder-gallery-item"><img src="<?= htmlspecialchars($galleryUrl) ?>" alt="<?= htmlspecialchars($block['title'] !== '' ? $block['title'] : 'Obraz galerii') ?>"></figure>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+
+                <?php if ($block['type'] === 'container'): ?>
+                    <?php $containerItems = json_decode((string) ($block['container_items_json'] ?? '[]'), true); ?>
+                    <?php if (!is_array($containerItems)) { $containerItems = []; } ?>
+                    <?php if ($containerItems !== []): ?>
+                        <div class="builder-container-grid cols-<?= (int) ($block['container_columns'] ?? 2) ?>">
+                            <?php foreach ($containerItems as $containerItem): ?>
+                                <?php if (!is_array($containerItem)) { continue; } ?>
+                                <article class="builder-container-item">
+                                    <?php if (!empty($containerItem['image'])): ?><img class="builder-container-image" src="<?= htmlspecialchars((string) $containerItem['image']) ?>" alt=""><?php endif; ?>
+                                    <?php if (!empty($containerItem['title'])): ?><h3><?= htmlspecialchars((string) $containerItem['title']) ?></h3><?php endif; ?>
+                                    <?php if (!empty($containerItem['text'])): ?><p><?= nl2br(htmlspecialchars((string) $containerItem['text'])) ?></p><?php endif; ?>
+                                    <?php if (!empty($containerItem['button_text']) && !empty($containerItem['button_url'])): ?><a href="<?= htmlspecialchars((string) $containerItem['button_url']) ?>" class="builder-button"><?= htmlspecialchars((string) $containerItem['button_text']) ?></a><?php endif; ?>
+                                </article>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+
+                <?php if ($block['type'] === 'plugin_slot'): ?>
+                    <div class="builder-plugin-slot">
+                        <?= cms_render_plugin_slot((string) ($block['plugin_slug'] ?? ''), $page) ?>
+                    </div>
+                <?php endif; ?>
+
                 <?php if ($block['title'] !== ''): ?>
                     <h2><?= htmlspecialchars($block['title']) ?></h2>
                 <?php endif; ?>

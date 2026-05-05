@@ -141,6 +141,59 @@ function cms_plugin_temp_dir(): string
     return $dir;
 }
 
+function cms_local_store_manifest_path(): string
+{
+    return __DIR__ . '/../updates/plugins.json';
+}
+
+function cms_local_store_catalog(): array
+{
+    $path = cms_local_store_manifest_path();
+    if (!is_file($path)) {
+        return [];
+    }
+
+    $decoded = json_decode((string) file_get_contents($path), true);
+    if (!is_array($decoded) || !isset($decoded['plugins']) || !is_array($decoded['plugins'])) {
+        return [];
+    }
+
+    return $decoded['plugins'];
+}
+
+function cms_local_store_add_plugin(array $plugin): void
+{
+    $slug = trim((string) ($plugin['slug'] ?? ''));
+    if (!preg_match('/^[a-z0-9\-]+$/', $slug)) {
+        throw new InvalidArgumentException('Nieprawidlowy slug pluginu do sklepu.');
+    }
+
+    $catalog = cms_local_store_catalog();
+    $updated = false;
+    foreach ($catalog as $idx => $item) {
+        if ((string) ($item['slug'] ?? '') !== $slug) {
+            continue;
+        }
+        $catalog[$idx] = array_merge($item, $plugin);
+        $updated = true;
+        break;
+    }
+    if (!$updated) {
+        $catalog[] = $plugin;
+    }
+
+    $payload = [
+        'plugins' => array_values($catalog),
+    ];
+
+    $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($json)) {
+        throw new RuntimeException('Nie mozna zapisac manifestu sklepu pluginow.');
+    }
+
+    file_put_contents(cms_local_store_manifest_path(), $json . "\n");
+}
+
 function cms_rrmdir(string $dir): void
 {
     if (!is_dir($dir)) {
@@ -192,28 +245,157 @@ function cms_copy_dir(string $source, string $destination): void
     }
 }
 
-function cms_find_plugin_root_in_extracted(string $extractDir): string
+function cms_find_plugin_root_in_extracted(string $extractDir, string $expectedSlug = ''): string
 {
     if (is_file($extractDir . '/plugin.json')) {
-        return $extractDir;
+        $manifest = json_decode((string) file_get_contents($extractDir . '/plugin.json'), true);
+        if (!is_array($manifest) || $expectedSlug === '' || (string) ($manifest['slug'] ?? '') === $expectedSlug) {
+            return $extractDir;
+        }
     }
 
-    $items = scandir($extractDir);
-    if (!is_array($items)) {
-        throw new RuntimeException('Nie mozna odczytac rozpakowanego pluginu.');
-    }
+    $firstValidCandidate = '';
 
-    foreach ($items as $item) {
-        if ($item === '.' || $item === '..') {
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($extractDir, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST
+    );
+
+    foreach ($iterator as $item) {
+        if (!$item->isFile() || $item->getFilename() !== 'plugin.json') {
             continue;
         }
-        $candidate = $extractDir . '/' . $item;
-        if (is_dir($candidate) && is_file($candidate . '/plugin.json')) {
-            return $candidate;
+
+        $manifestPath = (string) $item->getPathname();
+        $manifest = json_decode((string) file_get_contents($manifestPath), true);
+        if (!is_array($manifest) || empty($manifest['slug']) || empty($manifest['name'])) {
+            continue;
+        }
+
+        $candidateRoot = dirname($manifestPath);
+        $candidateSlug = (string) ($manifest['slug'] ?? '');
+
+        if ($expectedSlug !== '' && $candidateSlug === $expectedSlug) {
+            return $candidateRoot;
+        }
+
+        if ($firstValidCandidate === '') {
+            $firstValidCandidate = $candidateRoot;
         }
     }
 
-    throw new RuntimeException('Paczka pluginu nie zawiera pliku plugin.json.');
+    if ($firstValidCandidate !== '') {
+        return $firstValidCandidate;
+    }
+
+    throw new RuntimeException('Paczka pluginu nie zawiera poprawnego pliku plugin.json.');
+}
+
+function cms_install_or_update_plugin_from_zip_path(string $zipPath, string $expectedSlug = ''): array
+{
+    if (!is_file($zipPath)) {
+        throw new RuntimeException('Brak paczki ZIP pluginu.');
+    }
+
+    if (!class_exists('ZipArchive')) {
+        throw new RuntimeException('Brak rozszerzenia ZipArchive na serwerze.');
+    }
+
+    $extractDir = cms_plugin_temp_dir() . '/plugin-upload-' . bin2hex(random_bytes(4));
+    mkdir($extractDir, 0750, true);
+
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath) !== true) {
+        cms_rrmdir($extractDir);
+        throw new RuntimeException('Paczka pluginu nie jest poprawnym ZIP.');
+    }
+
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $entryName = (string) $zip->getNameIndex($i);
+        if ($entryName === '') {
+            continue;
+        }
+        if (str_starts_with($entryName, '/') || str_contains($entryName, '..')) {
+            $zip->close();
+            cms_rrmdir($extractDir);
+            throw new RuntimeException('Paczka pluginu zawiera niedozwolone sciezki.');
+        }
+    }
+
+    $zip->extractTo($extractDir);
+    $zip->close();
+
+    try {
+        $pluginRoot = cms_find_plugin_root_in_extracted($extractDir, $expectedSlug);
+        $manifest = json_decode((string) file_get_contents($pluginRoot . '/plugin.json'), true);
+        if (!is_array($manifest) || empty($manifest['slug']) || empty($manifest['name'])) {
+            throw new RuntimeException('plugin.json w paczce jest niepoprawny.');
+        }
+
+        $slug = (string) $manifest['slug'];
+        if ($expectedSlug !== '' && $slug !== $expectedSlug) {
+            throw new RuntimeException('Slug pluginu w paczce nie zgadza sie z oczekiwanym slugiem.');
+        }
+
+        $pluginsDir = cms_plugins_directory_path();
+        if (!is_dir($pluginsDir)) {
+            mkdir($pluginsDir, 0750, true);
+        }
+
+        $targetDir = $pluginsDir . '/' . $slug;
+        $backupDir = $pluginsDir . '/.' . $slug . '-backup-' . bin2hex(random_bytes(3));
+        $hadPrevious = is_dir($targetDir);
+        if ($hadPrevious && !rename($targetDir, $backupDir)) {
+            throw new RuntimeException('Nie mozna przygotowac backupu pluginu do aktualizacji.');
+        }
+
+        try {
+            cms_copy_dir($pluginRoot, $targetDir);
+            if ($hadPrevious) {
+                cms_rrmdir($backupDir);
+            }
+        } catch (Throwable $e) {
+            cms_rrmdir($targetDir);
+            if ($hadPrevious) {
+                @rename($backupDir, $targetDir);
+            }
+            throw $e;
+        }
+
+        cms_sync_plugins();
+
+        cms_db()->prepare('UPDATE cms_plugins SET source = ?, homepage = ?, updated_at = CURRENT_TIMESTAMP WHERE slug = ?')->execute([
+            (string) ($manifest['source'] ?? 'upload'),
+            (string) ($manifest['homepage'] ?? ''),
+            $slug,
+        ]);
+
+        return [
+            'slug' => $slug,
+            'name' => (string) $manifest['name'],
+            'version' => (string) ($manifest['version'] ?? '0.0.0'),
+            'updated' => $hadPrevious,
+        ];
+    } finally {
+        cms_rrmdir($extractDir);
+    }
+}
+
+function cms_render_plugin_slot(string $pluginSlug, array $page): string
+{
+    $pluginSlug = trim($pluginSlug);
+    if ($pluginSlug === '') {
+        return '';
+    }
+
+    $output = cms_collect_hook_output('plugin_render', $pluginSlug, $page, 'builder_slot');
+    if ($output !== '') {
+        return $output;
+    }
+
+    return '<div class="plugin-note"><strong>'
+        . htmlspecialchars($pluginSlug, ENT_QUOTES, 'UTF-8')
+        . '</strong>Brak renderu dla pluginu w kontenerze buildera.</div>';
 }
 
 function cms_install_or_update_plugin_from_store(string $slug): array
@@ -282,7 +464,7 @@ function cms_install_or_update_plugin_from_store(string $slug): array
     @unlink($zipFile);
 
     try {
-        $pluginRoot = cms_find_plugin_root_in_extracted($extractDir);
+        $pluginRoot = cms_find_plugin_root_in_extracted($extractDir, $slug);
         $manifest = json_decode((string) file_get_contents($pluginRoot . '/plugin.json'), true);
         if (!is_array($manifest) || empty($manifest['slug']) || empty($manifest['name'])) {
             throw new RuntimeException('plugin.json w paczce jest niepoprawny.');

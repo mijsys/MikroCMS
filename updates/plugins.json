@@ -8,6 +8,24 @@
       "repository": "https://github.com/mijsys/MikroCMS",
       "homepage": "https://github.com/mijsys/MikroCMS/tree/main/plugins/hello-world",
       "download_url": "https://github.com/mijsys/MikroCMS/archive/refs/heads/main.zip"
+    },
+    {
+      "slug": "comments",
+      "name": "Comments Plugin",
+      "version": "1.0.0",
+      "description": "Komentarze do stron CMS (formularz + lista komentarzy).",
+      "repository": "https://github.com/mijsys/MikroCMS",
+      "homepage": "https://github.com/mijsys/MikroCMS/tree/main/plugins/comments",
+      "download_url": "https://github.com/mijsys/MikroCMS/archive/refs/heads/main.zip"
+    },
+    {
+      "slug": "facebook-feed",
+      "name": "Facebook Feed Plugin",
+      "version": "1.0.0",
+      "description": "Pobiera posty lub wydarzenia z Facebook Page API (token + page id).",
+      "repository": "https://github.com/mijsys/MikroCMS",
+      "homepage": "https://github.com/mijsys/MikroCMS/tree/main/plugins/facebook-feed",
+      "download_url": "https://github.com/mijsys/MikroCMS/archive/refs/heads/main.zip"
     }
   ]
 }

@@ -27,6 +27,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $result = cms_install_or_update_plugin_from_store((string) ($_POST['slug'] ?? ''));
                 cms_flash('success', $result['updated'] ? 'Plugin zostal zaktualizowany: ' . $result['name'] : 'Plugin zostal zainstalowany: ' . $result['name']);
                 break;
+            case 'upload_plugin_zip':
+                if (empty($_FILES['plugin_zip']) || !is_array($_FILES['plugin_zip'])) {
+                    throw new RuntimeException('Nie wybrano pliku ZIP pluginu.');
+                }
+                $file = $_FILES['plugin_zip'];
+                if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                    throw new RuntimeException('Blad uploadu pliku ZIP pluginu.');
+                }
+                $tmpPath = (string) ($file['tmp_name'] ?? '');
+                $result = cms_install_or_update_plugin_from_zip_path($tmpPath);
+                cms_flash('success', $result['updated'] ? 'Plugin z ZIP zostal zaktualizowany: ' . $result['name'] : 'Plugin z ZIP zostal zainstalowany: ' . $result['name']);
+                break;
+            case 'add_plugin_to_store':
+                $slug = trim((string) ($_POST['store_slug'] ?? ''));
+                $name = trim((string) ($_POST['store_name'] ?? ''));
+                $version = trim((string) ($_POST['store_version'] ?? '0.0.0'));
+                $description = trim((string) ($_POST['store_description'] ?? ''));
+                $downloadUrl = trim((string) ($_POST['store_download_url'] ?? ''));
+                $repository = trim((string) ($_POST['store_repository'] ?? ''));
+                if (!preg_match('/^[a-z0-9\-]+$/', $slug)) {
+                    throw new RuntimeException('Slug pluginu sklepu jest niepoprawny.');
+                }
+                if ($name === '') {
+                    throw new RuntimeException('Nazwa pluginu sklepu jest wymagana.');
+                }
+                if (!preg_match('#^https?://#i', $downloadUrl)) {
+                    throw new RuntimeException('Download URL musi byc poprawnym adresem HTTP/HTTPS.');
+                }
+                cms_local_store_add_plugin([
+                    'slug' => $slug,
+                    'name' => $name,
+                    'version' => $version,
+                    'description' => $description,
+                    'download_url' => $downloadUrl,
+                    'repository' => $repository,
+                ]);
+                cms_flash('success', 'Plugin zostal zapisany w lokalnym sklepie.');
+                break;
+            case 'save_facebook_plugin_settings':
+                cms_set_setting('facebook_plugin_page_id', trim((string) ($_POST['facebook_plugin_page_id'] ?? '')));
+                cms_set_setting('facebook_plugin_access_token', trim((string) ($_POST['facebook_plugin_access_token'] ?? '')));
+                cms_set_setting('facebook_plugin_mode', in_array(($_POST['facebook_plugin_mode'] ?? 'posts'), ['posts', 'events'], true) ? (string) $_POST['facebook_plugin_mode'] : 'posts');
+                cms_set_setting('facebook_plugin_limit', (string) max(1, min(20, (int) ($_POST['facebook_plugin_limit'] ?? 5))));
+                cms_flash('success', 'Ustawienia pluginu Facebook zapisane.');
+                break;
             case 'save_plugin_placements':
                 $pageId = (int) ($_POST['placement_page_id'] ?? 0);
                 $placements = json_decode((string) ($_POST['placements_json'] ?? '[]'), true);
@@ -68,6 +113,8 @@ foreach ($placements as $placement) {
     $placementsBySlug[(string) $placement['plugin_slug']] = $placement;
 }
 $enabledPlugins = cms_enabled_plugins();
+$facebookMode = cms_get_setting('facebook_plugin_mode', 'posts');
+$facebookLimit = cms_get_setting('facebook_plugin_limit', '5');
 ?>
 <!DOCTYPE html>
 <html lang="pl">
@@ -126,15 +173,19 @@ $enabledPlugins = cms_enabled_plugins();
 
                 <section class="panel">
                     <h2>Sklep pluginow GitHub</h2>
+                    <div class="field" style="margin-bottom:10px">
+                        <label>Wyszukaj plugin w sklepie</label>
+                        <input type="text" id="storeSearchInput" placeholder="np. comments, facebook...">
+                    </div>
                     <?php if ($catalog): ?>
-                        <div class="store-list">
+                        <div class="store-list" id="storeList">
                             <?php foreach ($catalog as $item): ?>
                                 <?php
                                     $storeSlug = (string) ($item['slug'] ?? '');
                                     $installed = $storeSlug !== '' ? ($installedBySlug[$storeSlug] ?? null) : null;
                                     $hasUpdate = is_array($installed) && isset($pluginUpdates[$storeSlug]) && !empty($pluginUpdates[$storeSlug]['has_update']);
                                 ?>
-                                <div class="plugin-card">
+                                <div class="plugin-card" data-store-card data-search-text="<?= htmlspecialchars(strtolower((string) (($item['name'] ?? '') . ' ' . ($item['slug'] ?? '') . ' ' . ($item['description'] ?? '')))) ?>">
                                     <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
                                         <strong><?= htmlspecialchars((string) ($item['name'] ?? 'Plugin')) ?></strong>
                                         <?php if ($installed): ?><span class="badge <?= $hasUpdate ? '' : 'ok' ?>" <?= $hasUpdate ? 'style="background:rgba(251,191,36,.14);color:#fbbf24"' : '' ?>><?= $hasUpdate ? 'Aktualizacja dostepna' : 'Zainstalowany' ?></span><?php else: ?><span class="badge off">Nie zainstalowany</span><?php endif; ?>
@@ -156,6 +207,34 @@ $enabledPlugins = cms_enabled_plugins();
                     <?php else: ?>
                         <p class="muted">Podaj URL manifestu sklepu w Ustawieniach, aby pobrac liste pluginow.</p>
                     <?php endif; ?>
+
+                    <h3 style="margin-top:18px">Dodaj plugin do lokalnego sklepu</h3>
+                    <form method="post">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
+                        <input type="hidden" name="action" value="add_plugin_to_store">
+                        <div class="split">
+                            <div class="field"><label>Slug</label><input type="text" name="store_slug" required placeholder="np. comments"></div>
+                            <div class="field"><label>Nazwa</label><input type="text" name="store_name" required placeholder="np. Comments Plugin"></div>
+                        </div>
+                        <div class="split">
+                            <div class="field"><label>Wersja</label><input type="text" name="store_version" value="1.0.0"></div>
+                            <div class="field"><label>Download URL (ZIP)</label><input type="url" name="store_download_url" required placeholder="https://..."></div>
+                        </div>
+                        <div class="field"><label>Repozytorium</label><input type="url" name="store_repository" placeholder="https://github.com/... "></div>
+                        <div class="field"><label>Opis</label><textarea name="store_description"></textarea></div>
+                        <button class="btn" type="submit">Zapisz w sklepie</button>
+                    </form>
+                </section>
+
+                <section class="panel">
+                    <h2>Upload wlasnego pluginu</h2>
+                    <p class="muted">Wgraj paczke ZIP pluginu (musi zawierac plik plugin.json).</p>
+                    <form method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
+                        <input type="hidden" name="action" value="upload_plugin_zip">
+                        <div class="field"><label>Plik ZIP pluginu</label><input type="file" name="plugin_zip" accept=".zip,application/zip" required></div>
+                        <button class="btn" type="submit">Wgraj i zainstaluj</button>
+                    </form>
                 </section>
             </div>
 
@@ -206,10 +285,40 @@ $enabledPlugins = cms_enabled_plugins();
                         <p class="muted">Brak stron. Najpierw utworz strone w zakladce Strony.</p>
                     <?php endif; ?>
                 </section>
+
+                <section class="panel">
+                    <h2>Ustawienia pluginu Facebook</h2>
+                    <p class="muted">Mozesz pobierac posty lub wydarzenia z Facebooka przez Page ID i Access Token.</p>
+                    <form method="post">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
+                        <input type="hidden" name="action" value="save_facebook_plugin_settings">
+                        <div class="field"><label>Page ID</label><input type="text" name="facebook_plugin_page_id" value="<?= htmlspecialchars(cms_get_setting('facebook_plugin_page_id', '')) ?>"></div>
+                        <div class="field"><label>Access Token</label><input type="text" name="facebook_plugin_access_token" value="<?= htmlspecialchars(cms_get_setting('facebook_plugin_access_token', '')) ?>"></div>
+                        <div class="split">
+                            <div class="field"><label>Tryb</label><select name="facebook_plugin_mode"><option value="posts" <?= $facebookMode === 'posts' ? 'selected' : '' ?>>Posty</option><option value="events" <?= $facebookMode === 'events' ? 'selected' : '' ?>>Wydarzenia</option></select></div>
+                            <div class="field"><label>Limit</label><input type="number" min="1" max="20" name="facebook_plugin_limit" value="<?= htmlspecialchars($facebookLimit) ?>"></div>
+                        </div>
+                        <button class="btn" type="submit">Zapisz ustawienia Facebook</button>
+                    </form>
+                </section>
             </div>
         </div>
     </main>
 </div>
 <script src="<?= htmlspecialchars(cms_url('admin/assets/dashboard.js')) ?>"></script>
+<script>
+(function(){
+    var input=document.getElementById('storeSearchInput');
+    if(!input){return;}
+    var cards=[].slice.call(document.querySelectorAll('[data-store-card]'));
+    input.addEventListener('input',function(){
+        var q=(input.value||'').toLowerCase().trim();
+        cards.forEach(function(card){
+            var txt=(card.getAttribute('data-search-text')||'').toLowerCase();
+            card.style.display=(q===''||txt.indexOf(q)!==-1)?'':'none';
+        });
+    });
+}());
+</script>
 </body>
 </html>

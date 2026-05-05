@@ -1,0 +1,9 @@
+{
+  "slug": "facebook-feed",
+  "name": "Facebook Feed Plugin",
+  "version": "1.0.0",
+  "description": "Pobiera posty lub wydarzenia z Facebook Page API (token + page id).",
+  "entry": "bootstrap.php",
+  "homepage": "https://github.com/mijsys/MikroCMS",
+  "source": "local"
+}
