@@ -14,9 +14,20 @@ function cms_sanitize_remote_manifest_url(string $url): string
 
 function cms_update_sources(): array
 {
-    $cmsManifestUrl = cms_sanitize_remote_manifest_url(cms_get_setting('cms_update_manifest_url', CMS_DEFAULT_UPDATE_MANIFEST_URL));
-    $storeDbManifestUrl = cms_sanitize_remote_manifest_url(cms_get_setting('store_db_manifest_url', CMS_DEFAULT_STORE_MANIFEST_URL));
-    $pluginStoreManifestUrl = cms_sanitize_remote_manifest_url(cms_get_setting('plugin_store_manifest_url', CMS_DEFAULT_PLUGIN_MANIFEST_URL));
+    $cmsManifestUrl = cms_sanitize_remote_manifest_url(cms_get_setting('cms_update_manifest_url', ''));
+    if ($cmsManifestUrl === '') {
+        $cmsManifestUrl = CMS_DEFAULT_UPDATE_MANIFEST_URL;
+    }
+
+    $storeDbManifestUrl = cms_sanitize_remote_manifest_url(cms_get_setting('store_db_manifest_url', ''));
+    if ($storeDbManifestUrl === '') {
+        $storeDbManifestUrl = CMS_DEFAULT_STORE_MANIFEST_URL;
+    }
+
+    $pluginStoreManifestUrl = cms_sanitize_remote_manifest_url(cms_get_setting('plugin_store_manifest_url', ''));
+    if ($pluginStoreManifestUrl === '') {
+        $pluginStoreManifestUrl = CMS_DEFAULT_PLUGIN_MANIFEST_URL;
+    }
     $pluginCatalogKey = trim(cms_get_setting('plugin_store_catalog_key', 'plugins'));
     $pluginCatalogKey = preg_match('/^[a-zA-Z0-9_\-\.]+$/', $pluginCatalogKey) ? $pluginCatalogKey : 'plugins';
 
@@ -109,7 +120,7 @@ function cms_core_update_info(): array
 {
     $sources = cms_update_sources();
     $currentVersion = cms_core_version();
-    $manifest = cms_fetch_remote_json((string) ($sources['cms_update_manifest_url'] ?? ''), 4);
+    $manifest = cms_fetch_remote_json((string) ($sources['cms_update_manifest_url'] ?? ''), 8);
 
     if (!is_array($manifest)) {
         return [
