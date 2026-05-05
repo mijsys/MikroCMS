@@ -362,5 +362,6 @@ $twoFaQrUrl = $twoFaProvisioningUri !== ''
 }());
 </script>
 <?php endif; ?>
+<script src="<?= htmlspecialchars(cms_url('admin/assets/dashboard.js?v=' . rawurlencode(CMS_CODE_VERSION))) ?>"></script>
 </body>
 </html>

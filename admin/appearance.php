@@ -8,6 +8,7 @@ if (!cms_is_installed()) {
 
 cms_require_login();
 $user = cms_current_user();
+$previewPartsAllowed = ['header', 'hero', 'content', 'cta', 'footer'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!cms_verify_csrf($_POST['csrf_token'] ?? null)) {
@@ -33,6 +34,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         cms_set_setting('theme_bg_type', in_array($_POST['theme_bg_type'] ?? '', ['gradient','color','image'], true) ? (string) $_POST['theme_bg_type'] : 'gradient');
         cms_set_setting('theme_bg_image', trim($_POST['theme_bg_image'] ?? ''));
         cms_set_setting('theme_bg_attachment', ($_POST['theme_bg_attachment'] ?? 'scroll') === 'fixed' ? 'fixed' : 'scroll');
+
+        $previewLayoutRaw = (string) ($_POST['theme_preview_layout'] ?? '[]');
+        $previewLayoutDecoded = json_decode($previewLayoutRaw, true);
+        $previewLayout = [];
+        if (is_array($previewLayoutDecoded)) {
+            foreach ($previewLayoutDecoded as $item) {
+                $part = (string) $item;
+                if (in_array($part, $previewPartsAllowed, true) && !in_array($part, $previewLayout, true)) {
+                    $previewLayout[] = $part;
+                }
+            }
+        }
+        foreach ($previewPartsAllowed as $requiredPart) {
+            if (!in_array($requiredPart, $previewLayout, true)) {
+                $previewLayout[] = $requiredPart;
+            }
+        }
+        cms_set_setting('theme_preview_layout', json_encode($previewLayout, JSON_UNESCAPED_UNICODE));
+
         cms_flash('success', cms_t('admin.appearance.flash.saved', 'Styl witryny zostal zapisany.'));
     } catch (Throwable $e) {
         cms_flash('error', $e->getMessage());
@@ -43,6 +63,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $flash = cms_pull_flash();
 $themeSettings = cms_get_theme_settings();
+$previewLayoutStored = json_decode((string) cms_get_setting('theme_preview_layout', '[]'), true);
+$previewLayout = [];
+if (is_array($previewLayoutStored)) {
+    foreach ($previewLayoutStored as $part) {
+        $partKey = (string) $part;
+        if (in_array($partKey, $previewPartsAllowed, true) && !in_array($partKey, $previewLayout, true)) {
+            $previewLayout[] = $partKey;
+        }
+    }
+}
+foreach ($previewPartsAllowed as $requiredPart) {
+    if (!in_array($requiredPart, $previewLayout, true)) {
+        $previewLayout[] = $requiredPart;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="<?= htmlspecialchars(cms_admin_language()) ?>">
@@ -79,6 +114,7 @@ $themeSettings = cms_get_theme_settings();
                 <div class="customizer-controls">
                     <form method="post" id="themeForm">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
+                        <input type="hidden" name="theme_preview_layout" id="themePreviewLayoutInput" value="<?= htmlspecialchars(json_encode($previewLayout, JSON_UNESCAPED_UNICODE)) ?>">
                         <div class="cust-group"><div class="cust-group-title"><?= htmlspecialchars(cms_t('admin.appearance.colors', 'Kolory')) ?></div>
                             <div class="cust-row"><label><?= htmlspecialchars(cms_t('admin.appearance.color.accent', 'Kolor wiodacy')) ?></label><input type="color" name="theme_accent" value="<?= htmlspecialchars($themeSettings['accent']) ?>"></div>
                             <div class="cust-row"><label><?= htmlspecialchars(cms_t('admin.appearance.color.text', 'Kolor tekstu')) ?></label><input type="color" name="theme_text" value="<?= htmlspecialchars($themeSettings['text']) ?>"></div>
@@ -108,14 +144,37 @@ $themeSettings = cms_get_theme_settings();
                     </form>
                 </div>
                 <div class="customizer-preview" id="custPreview">
-                    <div class="prev-header"><span class="prev-brand"><?= htmlspecialchars(cms_t('admin.appearance.preview.site_name', 'Nazwa strony')) ?></span><div class="prev-nav"><span><?= htmlspecialchars(cms_t('admin.appearance.preview.nav.home', 'Start')) ?></span><span class="active"><?= htmlspecialchars(cms_t('admin.appearance.preview.nav.offer', 'Oferta')) ?></span><span><?= htmlspecialchars(cms_t('admin.appearance.preview.nav.contact', 'Kontakt')) ?></span></div></div>
-                    <div class="prev-body"><div class="prev-card"><div class="prev-eyebrow"><?= htmlspecialchars(cms_t('label.cms_page', 'CMS Page')) ?></div><h2 class="prev-h1"><?= htmlspecialchars(cms_t('admin.appearance.preview.page_title', 'Tytul strony')) ?></h2><p class="prev-lead"><?= htmlspecialchars(cms_t('admin.appearance.preview.desc', 'Podglad wygladu strony na zywo.')) ?></p><a href="#" class="prev-btn" onclick="return false"><?= htmlspecialchars(cms_t('admin.appearance.preview.button', 'Przycisk')) ?></a></div></div>
-                    <div class="prev-footer">&copy; 2026 <?= htmlspecialchars(cms_t('admin.appearance.preview.site_name', 'Nazwa strony')) ?></div>
+                    <div class="muted tiny" style="padding:14px 18px 0"><?= htmlspecialchars(cms_t('admin.appearance.preview.drag_help', 'Przeciagnij sekcje podgladu, aby ustawic kolejnosc ukladu calej strony.')) ?></div>
+                    <div id="previewSortable" class="preview-sortable">
+                        <div class="preview-part" data-preview-part="header" draggable="true">
+                            <div class="preview-part-head"><span class="preview-handle">Przeciagnij</span><strong><?= htmlspecialchars(cms_t('admin.appearance.preview.part.header', 'Naglowek')) ?></strong></div>
+                            <div class="prev-header"><span class="prev-brand"><?= htmlspecialchars(cms_t('admin.appearance.preview.site_name', 'Nazwa strony')) ?></span><div class="prev-nav"><span><?= htmlspecialchars(cms_t('admin.appearance.preview.nav.home', 'Start')) ?></span><span class="active"><?= htmlspecialchars(cms_t('admin.appearance.preview.nav.offer', 'Oferta')) ?></span><span><?= htmlspecialchars(cms_t('admin.appearance.preview.nav.contact', 'Kontakt')) ?></span></div></div>
+                        </div>
+                        <div class="preview-part" data-preview-part="hero" draggable="true">
+                            <div class="preview-part-head"><span class="preview-handle">Przeciagnij</span><strong><?= htmlspecialchars(cms_t('admin.appearance.preview.part.hero', 'Hero')) ?></strong></div>
+                            <div class="prev-body"><div class="prev-card"><div class="prev-eyebrow"><?= htmlspecialchars(cms_t('label.cms_page', 'CMS Page')) ?></div><h2 class="prev-h1"><?= htmlspecialchars(cms_t('admin.appearance.preview.page_title', 'Tytul strony')) ?></h2><p class="prev-lead"><?= htmlspecialchars(cms_t('admin.appearance.preview.desc', 'Podglad wygladu strony na zywo.')) ?></p><a href="#" class="prev-btn" onclick="return false"><?= htmlspecialchars(cms_t('admin.appearance.preview.button', 'Przycisk')) ?></a></div></div>
+                        </div>
+                        <div class="preview-part" data-preview-part="content" draggable="true">
+                            <div class="preview-part-head"><span class="preview-handle">Przeciagnij</span><strong><?= htmlspecialchars(cms_t('admin.appearance.preview.part.content', 'Sekcja tresci')) ?></strong></div>
+                            <div class="prev-body"><div class="prev-card"><p class="prev-lead"><?= htmlspecialchars(cms_t('admin.appearance.preview.content_block', 'Tutaj pojawia sie tresc strony i bloki buildera.')) ?></p></div></div>
+                        </div>
+                        <div class="preview-part" data-preview-part="cta" draggable="true">
+                            <div class="preview-part-head"><span class="preview-handle">Przeciagnij</span><strong><?= htmlspecialchars(cms_t('admin.appearance.preview.part.cta', 'Sekcja CTA')) ?></strong></div>
+                            <div class="prev-body"><div class="prev-card"><h3 class="prev-h1" style="font-size:18px"><?= htmlspecialchars(cms_t('admin.appearance.preview.cta_title', 'Call to action')) ?></h3><a href="#" class="prev-btn" onclick="return false"><?= htmlspecialchars(cms_t('admin.appearance.preview.cta_button', 'Dzialaj teraz')) ?></a></div></div>
+                        </div>
+                        <div class="preview-part" data-preview-part="footer" draggable="true">
+                            <div class="preview-part-head"><span class="preview-handle">Przeciagnij</span><strong><?= htmlspecialchars(cms_t('admin.appearance.preview.part.footer', 'Stopka')) ?></strong></div>
+                            <div class="prev-footer">&copy; 2026 <?= htmlspecialchars(cms_t('admin.appearance.preview.site_name', 'Nazwa strony')) ?></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
     </main>
 </div>
-<script src="<?= htmlspecialchars(cms_url('admin/assets/dashboard.js')) ?>"></script>
+<script>
+window.CMS_THEME_PREVIEW_LAYOUT = <?= json_encode($previewLayout, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+</script>
+<script src="<?= htmlspecialchars(cms_url('admin/assets/dashboard.js?v=' . rawurlencode(CMS_CODE_VERSION))) ?>"></script>
 </body>
 </html>

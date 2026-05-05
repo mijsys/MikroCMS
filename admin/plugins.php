@@ -305,7 +305,7 @@ $facebookLimit = cms_get_setting('facebook_plugin_limit', '5');
         </div>
     </main>
 </div>
-<script src="<?= htmlspecialchars(cms_url('admin/assets/dashboard.js')) ?>"></script>
+<script src="<?= htmlspecialchars(cms_url('admin/assets/dashboard.js?v=' . rawurlencode(CMS_CODE_VERSION))) ?>"></script>
 <script>
 (function(){
     var input=document.getElementById('storeSearchInput');

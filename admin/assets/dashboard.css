@@ -506,6 +506,41 @@ td small {
 	box-shadow: 0 24px 80px rgba(5, 14, 21, 0.35);
 }
 
+.preview-sortable {
+	display: grid;
+	gap: 10px;
+	padding: 12px;
+}
+
+.preview-part {
+	border: 1px dashed rgba(103, 154, 190, 0.45);
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.4);
+	overflow: hidden;
+}
+
+.preview-part.dragging {
+	opacity: 0.45;
+}
+
+.preview-part-head {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 12px;
+	font-size: 12px;
+	border-bottom: 1px solid rgba(103, 154, 190, 0.25);
+	background: rgba(255, 255, 255, 0.62);
+	color: #28465f;
+}
+
+.preview-handle {
+	display: inline-block;
+	font-weight: 700;
+	color: #1a8aa8;
+	cursor: grab;
+}
+
 .prev-header {
 	display: flex;
 	justify-content: space-between;

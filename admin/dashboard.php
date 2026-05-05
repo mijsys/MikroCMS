@@ -207,5 +207,6 @@ $coreDownloadUrl = cms_core_update_download_url($coreUpdate);
         </div>
     </main>
 </div>
+<script src="<?= htmlspecialchars(cms_url('admin/assets/dashboard.js?v=' . rawurlencode(CMS_CODE_VERSION))) ?>"></script>
 </body>
 </html>

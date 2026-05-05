@@ -97,9 +97,12 @@ foreach ($pages as $pageItem) {
     </aside>
     <main class="main">
         <div class="topbar">
-            <div>
-                <h1 style="margin:0 0 6px"><?= htmlspecialchars(cms_t('admin.pages.heading', 'Strony i podstrony')) ?></h1>
-                <div class="muted"><?= htmlspecialchars(cms_t('admin.pages.subheading', 'Tworzenie stron, podstron i builder drag and drop.')) ?></div>
+            <div style="display:flex;align-items:flex-start;gap:12px">
+                <button id="sidebarToggleBtn" class="btn ghost" title="Ukryj panel boczny" style="padding:8px 13px;font-size:18px;line-height:1;flex-shrink:0;margin-top:3px">&#8249;</button>
+                <div>
+                    <h1 style="margin:0 0 6px"><?= htmlspecialchars(cms_t('admin.pages.heading', 'Strony i podstrony')) ?></h1>
+                    <div class="muted"><?= htmlspecialchars(cms_t('admin.pages.subheading', 'Tworzenie stron, podstron i builder drag and drop.')) ?></div>
+                </div>
             </div>
             <form method="get" class="actions" style="align-items:center">
                 <?php if ($editPage && !empty($editPage['id'])): ?><input type="hidden" name="edit" value="<?= (int) $editPage['id'] ?>"><?php endif; ?>
@@ -172,7 +175,14 @@ foreach ($pages as $pageItem) {
                         <div id="builderEmptyV2" class="builder-empty"><?= htmlspecialchars(cms_t('admin.pages.form.builder_empty', 'Builder jest pusty. Dodaj pierwszy blok.')) ?></div>
                         <div id="builderListV2" class="builder-list"></div>
 
-                        <div class="actions" style="margin-top:18px"><button class="btn" type="submit"><?= htmlspecialchars(cms_t('admin.pages.form.save', 'Zapisz strone')) ?></button><a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>"><?= htmlspecialchars(cms_t('admin.pages.form.clear', 'Wyczysc formularz')) ?></a></div>
+                        <div class="actions" style="margin-top:18px;align-items:center;flex-wrap:wrap">
+                            <button class="btn" type="submit"><?= htmlspecialchars(cms_t('admin.pages.form.save', 'Zapisz strone')) ?></button>
+                            <?php if ($editPage && !empty($editPage['slug'])): ?>
+                            <button id="pagePreviewBtn" class="btn secondary" type="button"><?= htmlspecialchars(cms_t('admin.pages.form.preview', 'Podglad')) ?> &#9673;</button>
+                            <?php endif; ?>
+                            <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>"><?= htmlspecialchars(cms_t('admin.pages.form.clear', 'Wyczysc formularz')) ?></a>
+                            <span id="autosaveBadge" class="autosave-badge"></span>
+                        </div>
                     </form>
                 </section>
             </div>
@@ -214,8 +224,31 @@ foreach ($pages as $pageItem) {
         </div>
     </main>
 </div>
-<script>window.CMS_BUILDER_BLOCKS = <?= json_encode($builderBlocks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;</script>
-<script src="<?= htmlspecialchars(cms_url('admin/assets/dashboard.js')) ?>"></script>
-<script src="<?= htmlspecialchars(cms_url('admin/assets/page-builder.js')) ?>"></script>
+<?php
+$previewUrl = ($editPage && !empty($editPage['slug']))
+    ? cms_url_with_lang(['page' => (string) $editPage['slug'], 'lang' => $editorLang])
+    : '';
+$draftKey = 'cms_draft_' . ($editPage ? (int) ($editPage['id'] ?? 0) : 'new') . '_' . $editorLang;
+?>
+<div id="pagePreviewOverlay" class="page-preview-overlay">
+    <div class="page-preview-bar">
+        <strong><?= htmlspecialchars(cms_t('admin.pages.preview.title', 'Podglad strony')) ?></strong>
+        <span class="muted"><?= htmlspecialchars(cms_t('admin.pages.preview.note', 'Wyswietla ostatnio zapisana wersje strony')) ?></span>
+        <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+            <?php if ($previewUrl !== ''): ?>
+            <a class="btn secondary" href="<?= htmlspecialchars($previewUrl) ?>" target="_blank" rel="noopener" style="font-size:13px;padding:8px 14px"><?= htmlspecialchars(cms_t('admin.pages.preview.new_tab', 'Nowa karta')) ?> &#8599;</a>
+            <?php endif; ?>
+            <button id="pagePreviewClose" class="btn danger" type="button" style="font-size:13px;padding:8px 14px"><?= htmlspecialchars(cms_t('admin.pages.preview.close', 'Zamknij')) ?> &times;</button>
+        </div>
+    </div>
+    <iframe id="pagePreviewFrame" class="page-preview-frame" src="" title="<?= htmlspecialchars(cms_t('admin.pages.preview.iframe_title', 'Podglad strony')) ?>"></iframe>
+</div>
+<script>
+window.CMS_BUILDER_BLOCKS = <?= json_encode($builderBlocks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+window.CMS_DRAFT_KEY = <?= json_encode($draftKey) ?>;
+window.CMS_PAGE_PREVIEW_URL = <?= json_encode($previewUrl) ?>;
+</script>
+<script src="<?= htmlspecialchars(cms_url('admin/assets/dashboard.js?v=' . rawurlencode(CMS_CODE_VERSION))) ?>"></script>
+<script src="<?= htmlspecialchars(cms_url('admin/assets/page-builder.js?v=' . rawurlencode(CMS_CODE_VERSION))) ?>"></script>
 </body>
 </html>
