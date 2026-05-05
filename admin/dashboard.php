@@ -26,6 +26,7 @@ $pluginsWithUpdate = array_values(array_filter(
 ));
 $pluginUpdateCount = count($pluginsWithUpdate);
 $hasAnyUpdates = !empty($coreUpdate['has_update']) || $pluginUpdateCount > 0;
+$coreDownloadUrl = cms_core_update_download_url($coreUpdate);
 ?>
 <!DOCTYPE html>
 <html lang="pl">
@@ -124,6 +125,11 @@ $hasAnyUpdates = !empty($coreUpdate['has_update']) || $pluginUpdateCount > 0;
             <?php endif; ?>
 
             <div class="actions">
+                <?php if (!empty($coreUpdate['has_update']) && $coreDownloadUrl !== ''): ?>
+                    <a class="btn" href="<?= htmlspecialchars($coreDownloadUrl) ?>" target="_blank" rel="noopener noreferrer">Aktualizuj CMS</a>
+                <?php else: ?>
+                    <button class="btn secondary" type="button" disabled style="opacity:.55;cursor:not-allowed">Aktualizuj CMS</button>
+                <?php endif; ?>
                 <a class="btn" href="<?= htmlspecialchars(cms_url('admin/plugins.php')) ?>">Przejdz do aktualizacji pluginow</a>
                 <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/settings.php')) ?>">Ustawienia zrodel aktualizacji</a>
             </div>

@@ -9,6 +9,12 @@ if (!cms_is_installed()) {
 cms_require_login();
 $user = cms_current_user();
 $db = cms_db();
+$defaultLang = cms_default_language();
+$enabledLangs = cms_enabled_languages();
+$editorLang = isset($_GET['lang']) ? cms_normalize_lang_code((string) $_GET['lang'], $defaultLang) : $defaultLang;
+if (!in_array($editorLang, $enabledLangs, true)) {
+    $editorLang = $defaultLang;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!cms_verify_csrf($_POST['csrf_token'] ?? null)) {
@@ -21,7 +27,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         switch ($action) {
             case 'save_page':
                 $id = isset($_POST['page_id']) && $_POST['page_id'] !== '' ? (int) $_POST['page_id'] : null;
-                cms_save_page($_POST, $id);
+                $savedId = cms_save_page($_POST, $id);
+                $editLangPost = cms_normalize_lang_code((string) ($_POST['edit_lang'] ?? $defaultLang), $defaultLang);
+                if ($editLangPost !== $defaultLang) {
+                    cms_save_page_translation($savedId, $editLangPost, $_POST);
+                }
                 cms_flash('success', $id ? 'Strona zostala zaktualizowana.' : 'Strona zostala dodana.');
                 break;
             case 'delete_page':
@@ -33,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         cms_flash('error', $e->getMessage());
     }
 
-    cms_redirect(cms_url('admin/pages.php'));
+    cms_redirect(cms_url('admin/pages.php?lang=' . urlencode($editorLang)));
 }
 
 $flash = cms_pull_flash();
@@ -42,6 +52,17 @@ $rootPages = cms_root_pages(false);
 $editPage = null;
 if (isset($_GET['edit'])) {
     $editPage = cms_page_by_id((int) $_GET['edit']);
+}
+
+if ($editPage && $editorLang !== $defaultLang) {
+    $translation = cms_page_translation((int) ($editPage['id'] ?? 0), $editorLang);
+    if (is_array($translation)) {
+        foreach (['title', 'excerpt', 'content', 'builder_data'] as $field) {
+            if (isset($translation[$field])) {
+                $editPage[$field] = (string) $translation[$field];
+            }
+        }
+    }
 }
 
 $builderBlocks = cms_normalize_builder_blocks($editPage['builder_data'] ?? '[]');
@@ -80,6 +101,15 @@ foreach ($pages as $pageItem) {
                 <h1 style="margin:0 0 6px">Strony i podstrony</h1>
                 <div class="muted">Tworzenie stron, podstron i builder drag and drop.</div>
             </div>
+            <form method="get" class="actions" style="align-items:center">
+                <?php if ($editPage && !empty($editPage['id'])): ?><input type="hidden" name="edit" value="<?= (int) $editPage['id'] ?>"><?php endif; ?>
+                <label class="muted" for="langSwitcher">Jezyk edycji</label>
+                <select id="langSwitcher" name="lang" onchange="this.form.submit()">
+                    <?php foreach ($enabledLangs as $langCode): ?>
+                        <option value="<?= htmlspecialchars($langCode) ?>" <?= $editorLang === $langCode ? 'selected' : '' ?>><?= strtoupper(htmlspecialchars($langCode)) ?><?= $langCode === $defaultLang ? ' (default)' : '' ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
         </div>
 
         <?php if ($flash): ?>
@@ -94,6 +124,7 @@ foreach ($pages as $pageItem) {
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
                         <input type="hidden" name="action" value="save_page">
                         <input type="hidden" name="page_id" value="<?= htmlspecialchars((string) ($editPage['id'] ?? '')) ?>">
+                        <input type="hidden" name="edit_lang" value="<?= htmlspecialchars($editorLang) ?>">
                         <input type="hidden" name="builder_data" id="builderDataInputV2" value="<?= htmlspecialchars(json_encode($builderBlocks, JSON_UNESCAPED_UNICODE)) ?>">
 
                         <div class="split">
@@ -156,7 +187,7 @@ foreach ($pages as $pageItem) {
                             <tr>
                                 <td>
                                     <strong><?php if (!empty($page['parent_id'])): ?><span class="child-mark">↳</span><?php endif; ?><?= htmlspecialchars($page['title']) ?></strong><br>
-                                    <div class="page-path"><?= htmlspecialchars(cms_url('?page=' . urlencode((string) $page['slug']))) ?></div>
+                                    <div class="page-path"><?= htmlspecialchars(cms_url_with_lang(['page' => (string) $page['slug'], 'lang' => $editorLang])) ?></div>
                                     <?php if (!empty($page['parent_id']) && isset($parentMap[(int) $page['parent_id']])): ?><small>Rodzic: <?= htmlspecialchars($parentMap[(int) $page['parent_id']]) ?></small><br><?php endif; ?>
                                     <?php if ((int) $page['is_homepage'] === 1): ?> <span class="badge ok">Home</span><?php endif; ?>
                                     <span class="badge">Sort: <?= (int) $page['sort_order'] ?></span>
@@ -165,7 +196,7 @@ foreach ($pages as $pageItem) {
                                 <td>
                                     <div class="table-actions">
                                         <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/pages.php?edit=' . (int) $page['id'])) ?>">Edytuj</a>
-                                        <a class="btn secondary" target="_blank" href="<?= htmlspecialchars(cms_url('?page=' . urlencode((string) $page['slug']))) ?>">Podglad</a>
+                                        <a class="btn secondary" target="_blank" href="<?= htmlspecialchars(cms_url_with_lang(['page' => (string) $page['slug'], 'lang' => $editorLang])) ?>">Podglad</a>
                                         <form method="post" onsubmit="return confirm('Usunac te strone?');">
                                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
                                             <input type="hidden" name="action" value="delete_page">

@@ -177,6 +177,27 @@ function cms_init_db(PDO $db): void
             UNIQUE KEY unique_page_plugin_position (page_id, plugin_slug, position)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $db->exec("CREATE TABLE IF NOT EXISTS cms_page_translations (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            page_id INT NOT NULL,
+            lang VARCHAR(12) NOT NULL,
+            title VARCHAR(191) NOT NULL,
+            excerpt TEXT NOT NULL,
+            content LONGTEXT NOT NULL,
+            builder_data LONGTEXT NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_page_lang (page_id, lang)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS cms_i18n_strings (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            lang VARCHAR(12) NOT NULL,
+            translation_key VARCHAR(191) NOT NULL,
+            translation_value LONGTEXT NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_lang_key (lang, translation_key)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         foreach ([
             "ALTER TABLE cms_pages ADD COLUMN parent_id INT NULL AFTER id",
             "ALTER TABLE cms_pages ADD COLUMN builder_data LONGTEXT NOT NULL AFTER content",
@@ -242,6 +263,29 @@ function cms_init_db(PDO $db): void
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )");
 
+        $db->exec("CREATE TABLE IF NOT EXISTS cms_page_translations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            page_id INTEGER NOT NULL,
+            lang TEXT NOT NULL,
+            title TEXT NOT NULL,
+            excerpt TEXT NOT NULL DEFAULT '',
+            content TEXT NOT NULL DEFAULT '',
+            builder_data TEXT NOT NULL DEFAULT '[]',
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_page_translations_page_lang ON cms_page_translations(page_id, lang)");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS cms_i18n_strings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lang TEXT NOT NULL,
+            translation_key TEXT NOT NULL,
+            translation_value TEXT NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_i18n_strings_lang_key ON cms_i18n_strings(lang, translation_key)");
+
         foreach ([
             "ALTER TABLE cms_pages ADD COLUMN parent_id INTEGER DEFAULT NULL",
             "ALTER TABLE cms_pages ADD COLUMN builder_data TEXT NOT NULL DEFAULT '[]'",
@@ -265,9 +309,11 @@ function cms_init_db(PDO $db): void
         ['site_name', 'My CMS'],
         ['site_tagline', 'Nowy system CMS oparty o portfolio'],
         ['theme', 'default'],
-        ['cms_core_version', '1.0.2'],
+        ['cms_core_version', '1.0.3'],
         ['site_mode', 'multipage'],
         ['theme_variant', 'multipage'],
+        ['site_default_language', 'pl'],
+        ['site_enabled_languages', 'pl,en'],
         ['cms_update_manifest_url', CMS_DEFAULT_UPDATE_MANIFEST_URL],
         ['store_db_manifest_url', CMS_DEFAULT_STORE_MANIFEST_URL],
         ['plugin_store_manifest_url', CMS_DEFAULT_PLUGIN_MANIFEST_URL],
@@ -296,6 +342,31 @@ function cms_init_db(PDO $db): void
         ['theme_footer_bg', '#ffffff'],
     ] as $setting) {
         $stmt->execute($setting);
+    }
+
+    $translations = [
+        ['en', 'nav.admin', 'Admin'],
+        ['en', 'label.onepage_section', 'Onepage section'],
+        ['en', 'label.related_subpages', 'Related subpages:'],
+        ['en', 'label.subpage', 'Subpage'],
+        ['en', 'label.cms_page', 'CMS Page'],
+        ['en', 'label.subpages', 'Subpages:'],
+        ['en', 'footer.mode', 'Mode:'],
+        ['en', 'footer.plugins_ready', 'Plugins and GitHub store ready'],
+        ['en', 'error.404_title', '404'],
+        ['en', 'error.404_excerpt', 'Page not found.'],
+        ['en', 'error.404_heading', 'Page not found.'],
+        ['en', 'error.404_message', 'Check the address or create a new page in CMS panel.'],
+    ];
+
+    if (cms_db_driver() === 'mysql') {
+        $trStmt = $db->prepare('INSERT IGNORE INTO cms_i18n_strings (lang, translation_key, translation_value) VALUES (?, ?, ?)');
+    } else {
+        $trStmt = $db->prepare('INSERT OR IGNORE INTO cms_i18n_strings (lang, translation_key, translation_value) VALUES (?, ?, ?)');
+    }
+
+    foreach ($translations as $row) {
+        $trStmt->execute($row);
     }
 }
 

@@ -94,6 +94,218 @@ function cms_slugify(string $value): string
     return $value !== '' ? $value : 'strona';
 }
 
+function cms_normalize_lang_code(string $lang, string $fallback = 'pl'): string
+{
+    $lang = strtolower(trim($lang));
+    if (preg_match('/^[a-z]{2,3}(?:-[a-z0-9]{2,8})?$/', $lang)) {
+        return $lang;
+    }
+    return $fallback;
+}
+
+function cms_default_language(): string
+{
+    return cms_normalize_lang_code(cms_get_setting('site_default_language', 'pl'), 'pl');
+}
+
+function cms_enabled_languages(): array
+{
+    $raw = trim(cms_get_setting('site_enabled_languages', 'pl,en'));
+    $parts = $raw === '' ? [] : preg_split('/\s*,\s*/', $raw);
+    if (!is_array($parts)) {
+        $parts = [];
+    }
+
+    $langs = [];
+    foreach ($parts as $part) {
+        $normalized = cms_normalize_lang_code((string) $part, '');
+        if ($normalized !== '' && !in_array($normalized, $langs, true)) {
+            $langs[] = $normalized;
+        }
+    }
+
+    $default = cms_default_language();
+    if (!in_array($default, $langs, true)) {
+        array_unshift($langs, $default);
+    }
+
+    return $langs === [] ? [$default] : $langs;
+}
+
+function cms_current_language(): string
+{
+    static $current = null;
+    if (is_string($current)) {
+        return $current;
+    }
+
+    $default = cms_default_language();
+    $allowed = cms_enabled_languages();
+
+    $scriptName = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
+    if (str_contains($scriptName, '/admin/')) {
+        $current = $default;
+        return $current;
+    }
+
+    cms_session_start();
+    $queryLang = isset($_GET['lang']) ? cms_normalize_lang_code((string) $_GET['lang'], $default) : '';
+    if ($queryLang !== '' && in_array($queryLang, $allowed, true)) {
+        $_SESSION['cms_lang'] = $queryLang;
+        $current = $queryLang;
+        return $current;
+    }
+
+    $sessionLang = isset($_SESSION['cms_lang']) ? cms_normalize_lang_code((string) $_SESSION['cms_lang'], $default) : '';
+    if ($sessionLang !== '' && in_array($sessionLang, $allowed, true)) {
+        $current = $sessionLang;
+        return $current;
+    }
+
+    $current = $default;
+    return $current;
+}
+
+function cms_url_with_lang(array $params = []): string
+{
+    $lang = isset($params['lang'])
+        ? cms_normalize_lang_code((string) $params['lang'], cms_default_language())
+        : cms_current_language();
+
+    if ($lang !== cms_default_language()) {
+        $params['lang'] = $lang;
+    } else {
+        unset($params['lang']);
+    }
+
+    if ($params === []) {
+        return cms_url();
+    }
+
+    return cms_url('?' . http_build_query($params));
+}
+
+function cms_page_translation(int $pageId, string $lang): ?array
+{
+    if ($pageId <= 0 || $lang === '' || $lang === cms_default_language()) {
+        return null;
+    }
+
+    $stmt = cms_db()->prepare('SELECT * FROM cms_page_translations WHERE page_id = ? AND lang = ? LIMIT 1');
+    $stmt->execute([$pageId, $lang]);
+    $row = $stmt->fetch();
+    return is_array($row) ? $row : null;
+}
+
+function cms_save_page_translation(int $pageId, string $lang, array $data): void
+{
+    $lang = cms_normalize_lang_code($lang, cms_default_language());
+    if ($pageId <= 0 || $lang === cms_default_language()) {
+        return;
+    }
+
+    $title = trim((string) ($data['title'] ?? ''));
+    $excerpt = trim((string) ($data['excerpt'] ?? ''));
+    $content = trim((string) ($data['content'] ?? ''));
+    $builderData = json_encode(cms_normalize_builder_blocks($data['builder_data'] ?? '[]'), JSON_UNESCAPED_UNICODE);
+
+    if ($title === '') {
+        return;
+    }
+
+    if (cms_db_driver() === 'mysql') {
+        cms_db()->prepare('INSERT INTO cms_page_translations (page_id, lang, title, excerpt, content, builder_data) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE title = VALUES(title), excerpt = VALUES(excerpt), content = VALUES(content), builder_data = VALUES(builder_data), updated_at = CURRENT_TIMESTAMP')
+            ->execute([$pageId, $lang, $title, $excerpt, $content, $builderData]);
+        return;
+    }
+
+    cms_db()->prepare('INSERT INTO cms_page_translations (page_id, lang, title, excerpt, content, builder_data) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(page_id, lang) DO UPDATE SET title = excluded.title, excerpt = excluded.excerpt, content = excluded.content, builder_data = excluded.builder_data, updated_at = CURRENT_TIMESTAMP')
+        ->execute([$pageId, $lang, $title, $excerpt, $content, $builderData]);
+}
+
+function cms_apply_page_translation(array $page, ?string $lang = null): array
+{
+    $lang = cms_normalize_lang_code((string) ($lang ?? cms_current_language()), cms_default_language());
+    if ($lang === cms_default_language()) {
+        return $page;
+    }
+
+    $pageId = (int) ($page['id'] ?? 0);
+    if ($pageId <= 0) {
+        return $page;
+    }
+
+    $translation = cms_page_translation($pageId, $lang);
+    if (!is_array($translation)) {
+        return $page;
+    }
+
+    foreach (['title', 'excerpt', 'content', 'builder_data'] as $field) {
+        if (isset($translation[$field]) && (string) $translation[$field] !== '') {
+            $page[$field] = (string) $translation[$field];
+        }
+    }
+    $page['_lang'] = $lang;
+    return $page;
+}
+
+function cms_set_translation(string $lang, string $key, string $value): void
+{
+    $lang = cms_normalize_lang_code($lang, cms_default_language());
+    $key = trim($key);
+    if ($key === '') {
+        return;
+    }
+
+    if (cms_db_driver() === 'mysql') {
+        cms_db()->prepare('INSERT INTO cms_i18n_strings (lang, translation_key, translation_value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE translation_value = VALUES(translation_value), updated_at = CURRENT_TIMESTAMP')->execute([$lang, $key, $value]);
+        return;
+    }
+
+    cms_db()->prepare('INSERT INTO cms_i18n_strings (lang, translation_key, translation_value) VALUES (?, ?, ?) ON CONFLICT(lang, translation_key) DO UPDATE SET translation_value = excluded.translation_value, updated_at = CURRENT_TIMESTAMP')->execute([$lang, $key, $value]);
+}
+
+function cms_translations_for_lang(string $lang): array
+{
+    $lang = cms_normalize_lang_code($lang, cms_default_language());
+    $stmt = cms_db()->prepare('SELECT translation_key, translation_value FROM cms_i18n_strings WHERE lang = ? ORDER BY translation_key ASC');
+    $stmt->execute([$lang]);
+    $rows = $stmt->fetchAll();
+
+    $out = [];
+    foreach ($rows as $row) {
+        $key = (string) ($row['translation_key'] ?? '');
+        if ($key === '') {
+            continue;
+        }
+        $out[$key] = (string) ($row['translation_value'] ?? '');
+    }
+
+    return $out;
+}
+
+function cms_translate(string $key, string $fallback = ''): string
+{
+    $key = trim($key);
+    if ($key === '') {
+        return $fallback;
+    }
+
+    static $cache = [];
+    $lang = cms_current_language();
+    $cacheKey = $lang . '|' . $key;
+    if (array_key_exists($cacheKey, $cache)) {
+        return $cache[$cacheKey] !== '' ? $cache[$cacheKey] : $fallback;
+    }
+
+    $stmt = cms_db()->prepare('SELECT translation_value FROM cms_i18n_strings WHERE lang = ? AND translation_key = ? LIMIT 1');
+    $stmt->execute([$lang, $key]);
+    $value = $stmt->fetchColumn();
+    $cache[$cacheKey] = $value !== false ? (string) $value : '';
+
+    return $cache[$cacheKey] !== '' ? $cache[$cacheKey] : $fallback;
+}
+
 function cms_site_mode(): string
 {
     return cms_get_setting('site_mode', 'multipage') === 'onepage' ? 'onepage' : 'multipage';
@@ -116,7 +328,7 @@ function cms_find_page_by_slug(string $slug, bool $publishedOnly = true): ?array
     $stmt->execute([$slug]);
     $page = $stmt->fetch();
 
-    return $page ?: null;
+    return $page ? cms_apply_page_translation($page) : null;
 }
 
 function cms_homepage(): ?array
@@ -125,13 +337,13 @@ function cms_homepage(): ?array
     $page = $stmt->fetch();
 
     if ($page) {
-        return $page;
+        return cms_apply_page_translation($page);
     }
 
     $stmt = cms_db()->query("SELECT * FROM cms_pages WHERE status = 'published' ORDER BY parent_id IS NOT NULL, sort_order ASC, id ASC LIMIT 1");
     $page = $stmt->fetch();
 
-    return $page ?: null;
+    return $page ? cms_apply_page_translation($page) : null;
 }
 
 function cms_all_pages(bool $publishedOnly = false): array
@@ -142,7 +354,8 @@ function cms_all_pages(bool $publishedOnly = false): array
     }
     $sql .= ' ORDER BY parent_id IS NOT NULL, parent_id ASC, sort_order ASC, is_homepage DESC, title ASC';
 
-    return cms_db()->query($sql)->fetchAll();
+    $rows = cms_db()->query($sql)->fetchAll();
+    return array_map(static fn(array $row): array => cms_apply_page_translation($row), $rows);
 }
 
 function cms_root_pages(bool $publishedOnly = false): array
@@ -153,7 +366,8 @@ function cms_root_pages(bool $publishedOnly = false): array
     }
     $sql .= ' ORDER BY sort_order ASC, is_homepage DESC, title ASC';
 
-    return cms_db()->query($sql)->fetchAll();
+    $rows = cms_db()->query($sql)->fetchAll();
+    return array_map(static fn(array $row): array => cms_apply_page_translation($row), $rows);
 }
 
 function cms_child_pages(int $parentId, bool $publishedOnly = false): array
@@ -166,7 +380,8 @@ function cms_child_pages(int $parentId, bool $publishedOnly = false): array
     $stmt = cms_db()->prepare($sql);
     $stmt->execute([$parentId]);
 
-    return $stmt->fetchAll();
+    $rows = $stmt->fetchAll();
+    return array_map(static fn(array $row): array => cms_apply_page_translation($row), $rows);
 }
 
 function cms_page_by_id(int $id): ?array
@@ -174,7 +389,7 @@ function cms_page_by_id(int $id): ?array
     $stmt = cms_db()->prepare('SELECT * FROM cms_pages WHERE id = ? LIMIT 1');
     $stmt->execute([$id]);
     $page = $stmt->fetch();
-    return $page ?: null;
+    return $page ? cms_apply_page_translation($page) : null;
 }
 
 function cms_decode_builder_data(?string $builderData): array

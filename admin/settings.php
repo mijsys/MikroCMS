@@ -17,10 +17,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
+        $action = (string) ($_POST['action'] ?? 'save_settings');
+        if ($action === 'save_translations') {
+            $translationLang = cms_normalize_lang_code((string) ($_POST['translation_lang'] ?? 'en'), 'en');
+            $translationsJson = (string) ($_POST['translations_json'] ?? '{}');
+            $decoded = json_decode($translationsJson, true);
+            if (!is_array($decoded)) {
+                throw new RuntimeException('JSON tlumaczen jest niepoprawny.');
+            }
+            foreach ($decoded as $key => $value) {
+                if (!is_string($key)) {
+                    continue;
+                }
+                cms_set_translation($translationLang, $key, is_scalar($value) ? (string) $value : '');
+            }
+            cms_flash('success', 'Slownik tlumaczen zostal zapisany.');
+            cms_redirect(cms_url('admin/settings.php?translation_lang=' . urlencode($translationLang)));
+        }
+
         cms_set_setting('site_name', trim($_POST['site_name'] ?? 'My CMS'));
         cms_set_setting('site_tagline', trim($_POST['site_tagline'] ?? ''));
         cms_set_setting('site_mode', ($_POST['site_mode'] ?? 'multipage') === 'onepage' ? 'onepage' : 'multipage');
         cms_set_setting('theme_variant', ($_POST['theme_variant'] ?? 'multipage') === 'onepage' ? 'onepage' : 'multipage');
+        $defaultLanguage = cms_normalize_lang_code((string) ($_POST['site_default_language'] ?? 'pl'), 'pl');
+        $enabledRaw = trim((string) ($_POST['site_enabled_languages'] ?? 'pl,en'));
+        $enabledParts = $enabledRaw === '' ? [] : preg_split('/\s*,\s*/', $enabledRaw);
+        if (!is_array($enabledParts)) {
+            $enabledParts = [];
+        }
+        $enabled = [];
+        foreach ($enabledParts as $part) {
+            $normalized = cms_normalize_lang_code((string) $part, '');
+            if ($normalized !== '' && !in_array($normalized, $enabled, true)) {
+                $enabled[] = $normalized;
+            }
+        }
+        if (!in_array($defaultLanguage, $enabled, true)) {
+            array_unshift($enabled, $defaultLanguage);
+        }
+        cms_set_setting('site_default_language', $defaultLanguage);
+        cms_set_setting('site_enabled_languages', implode(',', $enabled));
         cms_set_setting('cms_update_manifest_url', trim($_POST['cms_update_manifest_url'] ?? ''));
         cms_set_setting('store_db_manifest_url', trim($_POST['store_db_manifest_url'] ?? ''));
         cms_set_setting('plugin_store_manifest_url', trim($_POST['plugin_store_manifest_url'] ?? ''));
@@ -37,6 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $flash = cms_pull_flash();
 $pageCount = (int) $db->query('SELECT COUNT(*) FROM cms_pages')->fetchColumn();
 $pluginCount = (int) $db->query('SELECT COUNT(*) FROM cms_plugins')->fetchColumn();
+$translationLang = isset($_GET['translation_lang'])
+    ? cms_normalize_lang_code((string) $_GET['translation_lang'], 'en')
+    : 'en';
+$translationsJson = json_encode(cms_translations_for_lang($translationLang), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 ?>
 <!DOCTYPE html>
 <html lang="pl">
@@ -75,6 +115,10 @@ $pluginCount = (int) $db->query('SELECT COUNT(*) FROM cms_plugins')->fetchColumn
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
                         <div class="field"><label>Nazwa strony</label><input type="text" name="site_name" value="<?= htmlspecialchars(cms_get_setting('site_name', 'My CMS')) ?>"></div>
                         <div class="field"><label>Tagline</label><input type="text" name="site_tagline" value="<?= htmlspecialchars(cms_get_setting('site_tagline', '')) ?>"></div>
+                        <div class="split">
+                            <div class="field"><label>Domyslny jezyk</label><input type="text" name="site_default_language" placeholder="pl" value="<?= htmlspecialchars(cms_get_setting('site_default_language', 'pl')) ?>"></div>
+                            <div class="field"><label>Aktywne jezyki (CSV)</label><input type="text" name="site_enabled_languages" placeholder="pl,en,de" value="<?= htmlspecialchars(cms_get_setting('site_enabled_languages', 'pl,en')) ?>"></div>
+                        </div>
                         <div class="field"><label>Tryb strony</label><select name="site_mode"><option value="multipage" <?= cms_site_mode() === 'multipage' ? 'selected' : '' ?>>Wiele stron</option><option value="onepage" <?= cms_site_mode() === 'onepage' ? 'selected' : '' ?>>Onepage</option></select></div>
                         <div class="field"><label>Wariant motywu</label><select name="theme_variant"><option value="multipage" <?= cms_theme_variant() === 'multipage' ? 'selected' : '' ?>>Motyw wielostronicowy</option><option value="onepage" <?= cms_theme_variant() === 'onepage' ? 'selected' : '' ?>>Motyw onepage</option></select></div>
                         <div class="field"><label>Manifest aktualizacji CMS (GitHub Raw URL)</label><input type="url" name="cms_update_manifest_url" placeholder="https://raw.githubusercontent.com/.../cms-update.json" value="<?= htmlspecialchars(cms_get_setting('cms_update_manifest_url', '')) ?>"></div>
@@ -97,6 +141,18 @@ $pluginCount = (int) $db->query('SELECT COUNT(*) FROM cms_plugins')->fetchColumn
                         <div><strong>Liczba stron:</strong> <?= $pageCount ?></div>
                         <div><strong>Liczba pluginow:</strong> <?= $pluginCount ?></div>
                     </div>
+                </section>
+
+                <section class="panel">
+                    <h2>Tlumaczenia UI</h2>
+                    <p class="muted">Edytuj slownik tlumaczen (key -> value) w formacie JSON dla wybranego jezyka.</p>
+                    <form method="post">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
+                        <input type="hidden" name="action" value="save_translations">
+                        <div class="field"><label>Jezyk slownika</label><input type="text" name="translation_lang" value="<?= htmlspecialchars($translationLang) ?>"></div>
+                        <div class="field"><label>JSON tlumaczen</label><textarea name="translations_json" style="min-height:280px"><?= htmlspecialchars(is_string($translationsJson) ? $translationsJson : '{}') ?></textarea></div>
+                        <button class="btn" type="submit">Zapisz tlumaczenia</button>
+                    </form>
                 </section>
             </div>
         </div>

@@ -4,7 +4,7 @@ declare(strict_types=1);
 const CMS_DEFAULT_UPDATE_MANIFEST_URL = 'https://raw.githubusercontent.com/mijsys/MikroCMS/main/updates/cms-update.json';
 const CMS_DEFAULT_STORE_MANIFEST_URL = 'https://raw.githubusercontent.com/mijsys/MikroCMS/main/updates/store-db.json';
 const CMS_DEFAULT_PLUGIN_MANIFEST_URL = 'https://raw.githubusercontent.com/mijsys/MikroCMS/main/updates/plugins.json';
-const CMS_CODE_VERSION = '1.0.2';
+const CMS_CODE_VERSION = '1.0.3';
 
 function cms_sanitize_remote_manifest_url(string $url): string
 {
@@ -131,4 +131,15 @@ function cms_core_update_info(): array
         'remote_version' => $remoteVersion,
         'manifest' => $manifest,
     ];
+}
+
+function cms_core_update_download_url(array $coreUpdateInfo): string
+{
+    $manifest = $coreUpdateInfo['manifest'] ?? null;
+    if (!is_array($manifest)) {
+        return '';
+    }
+
+    $url = (string) ($manifest['download_url'] ?? '');
+    return cms_sanitize_remote_manifest_url($url);
 }

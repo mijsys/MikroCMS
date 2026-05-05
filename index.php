@@ -37,10 +37,10 @@ if ($siteMode === 'onepage' && ($slug === '' || $slug === 'strona')) {
     if (!$page) {
         http_response_code(404);
         $page = [
-            'title' => '404',
+            'title' => cms_translate('error.404_title', '404'),
             'slug' => '404',
-            'excerpt' => 'Nie znaleziono strony.',
-            'content' => '<h2>Nie znaleziono strony</h2><p>Sprawdz adres lub utworz nowa strone w panelu CMS.</p>',
+            'excerpt' => cms_translate('error.404_excerpt', 'Nie znaleziono strony.'),
+            'content' => '<h2>' . htmlspecialchars(cms_translate('error.404_heading', 'Nie znaleziono strony.'), ENT_QUOTES, 'UTF-8') . '</h2><p>' . htmlspecialchars(cms_translate('error.404_message', 'Sprawdz adres lub utworz nowa strone w panelu CMS.'), ENT_QUOTES, 'UTF-8') . '</p>',
             'builder_data' => '[]',
             'status' => 'published',
             'is_homepage' => 0,
