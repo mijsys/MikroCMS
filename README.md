@@ -25,6 +25,11 @@
 - Import/eksport layoutu z mapowaniem sekcji.
 - Wydajnosc: wirtualizacja paneli i optymalizacje przy wiekszych stronach.
 
+### 1.1.8 - DB Engine Switch (Admin)
+- Przelaczanie silnika bazy danych miedzy MySQL i SQLite z poziomu panelu admin.
+- Sekcja zabezpieczona dodatkowo: haslo + 2FA (TOTP + plik .mijauth) przed odblokowaniem akcji.
+- Walidacja bezpieczenstwa przed przelaczeniem: docelowa baza musi zawierac tabele CMS i aktualnego admina.
+
 ## Definition Of Done (dla PRO DnD)
 - Uzytkownik bez znajomosci programowania moze:
 	- dodac sekcje jako kafelek,

@@ -4,6 +4,8 @@
     var list = document.getElementById('builderListV2');
     var hidden = document.getElementById('builderDataInputV2');
     var canvas = document.getElementById('builderCanvasGrid');
+    var liveContent = document.getElementById('builderLiveContent');
+    var fallbackContentField = document.querySelector('#pageEditorForm [name="content"]');
     if (!list || !hidden) {
         return;
     }
@@ -292,7 +294,74 @@
         });
         hidden.value = JSON.stringify(payload);
         renderCanvas(payload);
+        renderLiveContent(payload);
         document.dispatchEvent(new CustomEvent('cms:builder:change'));
+    }
+
+    function renderLiveContent(payload) {
+        if (!liveContent) {
+            return;
+        }
+        liveContent.innerHTML = '';
+
+        if (!Array.isArray(payload) || payload.length === 0) {
+            var empty = document.createElement('div');
+            empty.className = 'builder-live-item';
+            var fallback = fallbackContentField ? String(fallbackContentField.value || '').trim() : '';
+            empty.innerHTML = '<strong>Fallback content</strong><p>' + esc(fallback ? fallback.slice(0, 180) : 'Brak blokow i brak tresci fallback.') + '</p>';
+            liveContent.appendChild(empty);
+            return;
+        }
+
+        payload.forEach(function (block, idx) {
+            var title = String(block.title || '').trim() || ('Sekcja ' + (idx + 1));
+            var text = String(block.text || '').trim();
+            if (!text && String(block.type || '') === 'gallery') {
+                text = 'Galeria obrazow';
+            }
+            if (!text && String(block.type || '') === 'container') {
+                text = 'Sekcja kontenerowa';
+            }
+            if (!text && String(block.type || '') === 'plugin_slot') {
+                text = 'Slot pluginu: ' + String(block.plugin_slug || '').trim();
+            }
+            var item = document.createElement('div');
+            item.className = 'builder-live-item';
+            item.innerHTML = '<strong>' + esc(title) + ' [' + esc(String(block.type || 'text').toUpperCase()) + ']</strong><p>' + esc((text || 'Brak tresci').slice(0, 180)) + '</p>';
+            liveContent.appendChild(item);
+        });
+    }
+
+    function setLayoutForIndex(index, nextX, nextY, nextW, nextH) {
+        var item = list.querySelectorAll('.builder-item')[index];
+        if (!item) {
+            return;
+        }
+        var xField = item.querySelector('[data-field="layout_x"]');
+        var yField = item.querySelector('[data-field="layout_y"]');
+        var wField = item.querySelector('[data-field="layout_w"]');
+        var hField = item.querySelector('[data-field="layout_h"]');
+        if (!xField || !yField || !wField || !hField) {
+            return;
+        }
+        xField.value = String(Math.max(0, Math.min(11, nextX)));
+        yField.value = String(Math.max(0, Math.min(200, nextY)));
+        wField.value = String(Math.max(1, Math.min(12, nextW)));
+        hField.value = String(Math.max(1, Math.min(12, nextH)));
+        sync();
+    }
+
+    function canvasCellSize() {
+        if (!canvas) {
+            return { w: 100, h: 56 };
+        }
+        var styles = window.getComputedStyle(canvas);
+        var rowH = parseFloat(styles.gridAutoRows || '48') || 48;
+        var rect = canvas.getBoundingClientRect();
+        return {
+            w: rect.width / 12,
+            h: rowH + 8
+        };
     }
 
     function renderCanvas(payload) {
@@ -319,9 +388,67 @@
 
             var card = document.createElement('div');
             card.className = 'builder-canvas-item';
+            card.setAttribute('data-canvas-index', String(idx));
             card.style.gridColumn = (x + 1) + ' / span ' + w;
             card.style.gridRow = (y + 1) + ' / span ' + h;
-            card.innerHTML = '<strong>' + esc(block.title || ('Sekcja ' + (idx + 1))) + '</strong><span>' + esc(String(block.type || 'text').toUpperCase()) + ' • x' + x + ' y' + y + ' w' + w + ' h' + h + '</span>';
+            card.innerHTML = '<strong>' + esc(block.title || ('Sekcja ' + (idx + 1))) + '</strong><span>' + esc(String(block.type || 'text').toUpperCase()) + ' • x' + x + ' y' + y + ' w' + w + ' h' + h + '</span><i class="builder-canvas-resize" title="Przeciagnij aby zmienic rozmiar"></i>';
+
+            card.addEventListener('mousedown', function (ev) {
+                if (ev.target && ev.target.classList && ev.target.classList.contains('builder-canvas-resize')) {
+                    return;
+                }
+                ev.preventDefault();
+                var size = canvasCellSize();
+                var startMouseX = ev.clientX;
+                var startMouseY = ev.clientY;
+                var startX = x;
+                var startY = y;
+
+                function onMove(moveEv) {
+                    var nextX = Math.round(startX + (moveEv.clientX - startMouseX) / size.w);
+                    var nextY = Math.round(startY + (moveEv.clientY - startMouseY) / size.h);
+                    nextX = Math.max(0, Math.min(12 - w, nextX));
+                    nextY = Math.max(0, Math.min(200, nextY));
+                    setLayoutForIndex(idx, nextX, nextY, w, h);
+                }
+
+                function onUp() {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                }
+
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+
+            var resizeHandle = card.querySelector('.builder-canvas-resize');
+            if (resizeHandle) {
+                resizeHandle.addEventListener('mousedown', function (ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    var size = canvasCellSize();
+                    var startMouseX = ev.clientX;
+                    var startMouseY = ev.clientY;
+                    var startW = w;
+                    var startH = h;
+
+                    function onMove(moveEv) {
+                        var nextW = Math.round(startW + (moveEv.clientX - startMouseX) / size.w);
+                        var nextH = Math.round(startH + (moveEv.clientY - startMouseY) / size.h);
+                        nextW = Math.max(1, Math.min(12 - x, nextW));
+                        nextH = Math.max(1, Math.min(12, nextH));
+                        setLayoutForIndex(idx, x, y, nextW, nextH);
+                    }
+
+                    function onUp() {
+                        document.removeEventListener('mousemove', onMove);
+                        document.removeEventListener('mouseup', onUp);
+                    }
+
+                    document.addEventListener('mousemove', onMove);
+                    document.addEventListener('mouseup', onUp);
+                });
+            }
             canvas.appendChild(card);
         });
     }
@@ -620,6 +747,18 @@
 
     renderEmpty();
     sync();
+
+    if (fallbackContentField) {
+        fallbackContentField.addEventListener('input', function () {
+            var payload = [];
+            try {
+                payload = JSON.parse(String(hidden.value || '[]'));
+            } catch (e) {
+                payload = [];
+            }
+            renderLiveContent(Array.isArray(payload) ? payload : []);
+        });
+    }
 
     var form = document.getElementById('pageEditorForm');
     if (form) {

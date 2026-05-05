@@ -137,7 +137,7 @@ $adminTheme = cms_admin_theme($user);
             <div class="stack">
                 <section class="panel">
                     <h2><?= htmlspecialchars($editPage ? cms_t('admin.pages.form.edit', 'Edytuj strone / podstrone') : cms_t('admin.pages.form.add', 'Dodaj nowa strone / podstrone')) ?></h2>
-                    <form method="post" id="pageEditorForm">
+                    <form method="post" id="pageEditorForm" novalidate>
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
                         <input type="hidden" name="action" value="save_page">
                         <input type="hidden" name="page_id" value="<?= htmlspecialchars((string) ($editPage['id'] ?? '')) ?>">
@@ -220,6 +220,10 @@ $adminTheme = cms_admin_theme($user);
                             <div class="builder-canvas-wrap">
                                 <div class="tiny" style="margin-bottom:8px">Canvas 12-kolumnowy (1.1.4): pozycja sekcji wg X/Y/W/H</div>
                                 <div id="builderCanvasGrid" class="builder-canvas-grid"></div>
+                            </div>
+                            <div class="builder-live-wrap">
+                                <div class="tiny" style="margin-bottom:8px">Live view 1.1.5: podglad aktualnej tresci strony podczas edycji</div>
+                                <div id="builderLiveContent" class="builder-live-content"></div>
                             </div>
                             <div id="builderEmptyV2" class="builder-empty"><?= htmlspecialchars(cms_t('admin.pages.form.builder_empty', 'Builder jest pusty. Dodaj pierwszy blok.')) ?></div>
                             <div id="builderListV2" class="builder-list"></div>
