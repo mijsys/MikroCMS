@@ -19,6 +19,9 @@
 - Blokowanie nakladania sekcji (collision rules) i automatyczne porzadkowanie.
 - Warstwy/outline sekcji (lista po lewej + zaznaczanie na canvasie).
 - Presety sekcji (hero, faq, cta, gallery, pricing) dodawane z palety.
+-  dodanie edytora tekstu zrób własne rozwiązanie
+- dodanie pluginu galeri
+- dodanie opcji dodania pluginów na róźne strony ale zaznaczyć czy mają dziediczyć 
 
 ### 1.1.7 - Production Ready
 - Rewizje buildera per strona (wersje ukladu) + szybkie przywracanie.
@@ -29,6 +32,10 @@
 - Przelaczanie silnika bazy danych miedzy MySQL i SQLite z poziomu panelu admin.
 - Sekcja zabezpieczona dodatkowo: haslo + 2FA (TOTP + plik .mijauth) przed odblokowaniem akcji.
 - Walidacja bezpieczenstwa przed przelaczeniem: docelowa baza musi zawierac tabele CMS i aktualnego admina.
+
+### 1.1.9 - Responsywność strony admina jak i dla użytkownika, pluginy i wszystko musi współgrać
+   - responsywność
+   - napisanie api dla tworzenia pluginów
 
 ## Definition Of Done (dla PRO DnD)
 - Uzytkownik bez znajomosci programowania moze:

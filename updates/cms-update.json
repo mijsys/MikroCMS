@@ -1,15 +1,15 @@
 {
   "name": "MikroCMS Core",
   "channel": "stable",
-  "latest_version": "1.1.4",
+  "latest_version": "1.1.5",
   "published_at": "2026-05-05T00:00:00Z",
   "changelog_url": "https://github.com/mijsys/MikroCMS/releases",
   "download_url": "https://github.com/mijsys/MikroCMS/archive/refs/heads/main.zip",
-  "notes": "Wersja 1.1.4: poprawka krytycznego bledu SQLite w historii rewizji stron oraz start PRO buildera grid/canvas i personalizacji panelu admina.",
+  "notes": "Wersja 1.1.5: finalizacja 1.1.4 (interaktywny grid canvas) oraz start i rozbudowa 1.1.5 live stage z breakpointami desktop/tablet/mobile.",
   "changes": [
-    "Poprawka krytyczna: naprawiono zapytanie SQL rewizji stron dla SQLite (usunieto niepoprawny token \\)",
-    "Panel admina: motyw per uzytkownik + nowy preset Neon Sunset",
-    "Ustawienia: podglad kart motywow i szybsza zmiana stylu",
-    "Page Builder 1.1.4: bazowy canvas 12-kolumnowy z polami layout X/Y/W/H i podgladem rozmieszczenia"
+    "Page Builder 1.1.4: interaktywne drag and drop oraz resize sekcji bezposrednio na canvasie 12-kolumnowym",
+    "Naprawa edycji strony: usunieto blad walidacji \"invalid form control is not focusable\" w dynamicznym builderze",
+    "Page Builder 1.1.5: live stage pokazujacy rzeczywista tresc sekcji podczas edycji",
+    "Live stage: breakpointy podgladu Desktop/Tablet/Mobile w czasie rzeczywistym"
   ]
 }

@@ -222,7 +222,14 @@ $adminTheme = cms_admin_theme($user);
                                 <div id="builderCanvasGrid" class="builder-canvas-grid"></div>
                             </div>
                             <div class="builder-live-wrap">
-                                <div class="tiny" style="margin-bottom:8px">Live view 1.1.5: podglad aktualnej tresci strony podczas edycji</div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+                                    <div class="tiny">Live view 1.1.5: podglad aktualnej tresci strony podczas edycji</div>
+                                    <div class="builder-live-breakpoints" id="builderLiveBreakpoints">
+                                        <button type="button" class="btn ghost active" data-live-breakpoint="desktop">Desktop</button>
+                                        <button type="button" class="btn ghost" data-live-breakpoint="tablet">Tablet</button>
+                                        <button type="button" class="btn ghost" data-live-breakpoint="mobile">Mobile</button>
+                                    </div>
+                                </div>
                                 <div id="builderLiveContent" class="builder-live-content"></div>
                             </div>
                             <div id="builderEmptyV2" class="builder-empty"><?= htmlspecialchars(cms_t('admin.pages.form.builder_empty', 'Builder jest pusty. Dodaj pierwszy blok.')) ?></div>
