@@ -132,6 +132,14 @@ function cms_enabled_languages(): array
     return $langs === [] ? [$default] : $langs;
 }
 
+function cms_admin_language(): string
+{
+    $default = cms_default_language();
+    $configured = cms_normalize_lang_code(cms_get_setting('admin_language', $default), $default);
+    $allowed = cms_enabled_languages();
+    return in_array($configured, $allowed, true) ? $configured : $default;
+}
+
 function cms_current_language(): string
 {
     static $current = null;
@@ -144,7 +152,7 @@ function cms_current_language(): string
 
     $scriptName = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
     if (str_contains($scriptName, '/admin/')) {
-        $current = $default;
+        $current = cms_admin_language();
         return $current;
     }
 
@@ -304,6 +312,11 @@ function cms_translate(string $key, string $fallback = ''): string
     $cache[$cacheKey] = $value !== false ? (string) $value : '';
 
     return $cache[$cacheKey] !== '' ? $cache[$cacheKey] : $fallback;
+}
+
+function cms_t(string $key, string $fallback = ''): string
+{
+    return cms_translate($key, $fallback);
 }
 
 function cms_site_mode(): string

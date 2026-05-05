@@ -12,7 +12,7 @@ if (cms_is_logged_in()) {
 
 $user = cms_pending_2fa_user();
 if (!$user) {
-    cms_flash('error', 'Sesja 2FA wygasla. Zaloguj sie ponownie.');
+    cms_flash('error', cms_t('admin.verify2fa.session_expired', 'Sesja 2FA wygasla. Zaloguj sie ponownie.'));
     cms_redirect(cms_url('admin/index.php'));
 }
 
@@ -22,11 +22,12 @@ $error = '';
 $lockSeconds = cms_2fa_remaining_lock_seconds($twoFaUserId);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!cms_verify_csrf($_POST['csrf_token'] ?? null)) {
-        $error = 'Nieprawidlowy token bezpieczenstwa.';
+        $error = cms_t('admin.flash.csrf_invalid', 'Nieprawidlowy token bezpieczenstwa.');
     } elseif ($lockSeconds > 0) {
-        $error = 'Zbyt wiele nieudanych prob. Sprobuj ponownie za ' . $lockSeconds . ' s.';
+        $error = cms_t('admin.verify2fa.too_many_attempts', 'Zbyt wiele nieudanych prob. Sprobuj ponownie za ') . $lockSeconds . ' s.';
     } else {
         $totpCode = trim((string) ($_POST['totp_code'] ?? ''));
+        $recoveryCode = trim((string) ($_POST['recovery_code'] ?? ''));
         $fileContent = trim((string) ($_POST['mijauth_content'] ?? ''));
 
         if ($fileContent === '' && isset($_FILES['mijauth_file']) && is_array($_FILES['mijauth_file']) && (int) ($_FILES['mijauth_file']['error'] ?? 1) === UPLOAD_ERR_OK) {
@@ -36,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        if (cms_verify_2fa_login($user, $totpCode, $fileContent)) {
+        if (cms_verify_2fa_login($user, $totpCode, $fileContent, $recoveryCode)) {
             cms_2fa_clear_throttle($twoFaUserId);
             cms_finalize_login($user);
             cms_redirect(cms_url('admin/dashboard.php'));
@@ -44,19 +45,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $lockSeconds = cms_2fa_register_failure($twoFaUserId);
         if ($lockSeconds > 0) {
-            $error = 'Konto zostalo czasowo zablokowane po nieudanych probach. Sprobuj ponownie za ' . $lockSeconds . ' s.';
+            $error = cms_t('admin.verify2fa.locked', 'Konto zostalo czasowo zablokowane po nieudanych probach. Sprobuj ponownie za ') . $lockSeconds . ' s.';
         } else {
-            $error = 'Weryfikacja 2FA nie powiodla sie (kod lub plik .mijauth).';
+            $error = cms_t('admin.verify2fa.failed', 'Weryfikacja 2FA nie powiodla sie (kod lub plik .mijauth).');
         }
     }
 }
 ?>
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="<?= htmlspecialchars(cms_admin_language()) ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weryfikacja 2FA</title>
+    <title><?= htmlspecialchars(cms_t('admin.verify2fa.title', 'Weryfikacja 2FA')) ?></title>
     <style>
         body{font-family:system-ui,-apple-system,sans-serif;background:#020617;color:#e2e8f0;display:grid;place-items:center;min-height:100vh;margin:0}
         .box{width:min(520px,92vw);background:#0f172a;border:1px solid #334155;border-radius:20px;padding:28px;box-shadow:0 24px 80px rgba(0,0,0,.35)}
@@ -71,22 +72,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <div class="box">
-    <h1>Weryfikacja 2FA</h1>
-    <p class="muted">Uzytkownik: <?= htmlspecialchars((string) ($user['username'] ?? 'admin')) ?></p>
-    <?php if ($lockSeconds > 0): ?><p class="muted">Logowanie 2FA zablokowane jeszcze przez <?= (int) $lockSeconds ?> s.</p><?php endif; ?>
+    <h1><?= htmlspecialchars(cms_t('admin.verify2fa.heading', 'Weryfikacja 2FA')) ?></h1>
+    <p class="muted"><?= htmlspecialchars(cms_t('admin.verify2fa.user', 'Uzytkownik:')) ?> <?= htmlspecialchars((string) ($user['username'] ?? 'admin')) ?></p>
+    <?php if ($lockSeconds > 0): ?><p class="muted"><?= htmlspecialchars(cms_t('admin.verify2fa.lock_remaining', 'Logowanie 2FA zablokowane jeszcze przez')) ?> <?= (int) $lockSeconds ?> s.</p><?php endif; ?>
     <?php if ($error !== ''): ?><div class="msg err"><?= htmlspecialchars($error) ?></div><?php endif; ?>
     <form method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
-        <label>Kod TOTP (6 cyfr)
-            <input type="text" name="totp_code" pattern="\d{6}" maxlength="6" required>
+        <label><?= htmlspecialchars(cms_t('admin.verify2fa.totp_code', 'Kod TOTP (6 cyfr)')) ?>
+            <input type="text" name="totp_code" pattern="\d{6}" maxlength="6">
         </label>
-        <label>Plik .mijauth
+        <label>Kod bezpieczeństwa (opcjonalnie zamiast TOTP)
+            <input type="text" name="recovery_code" maxlength="20" placeholder="ABCD-1234">
+        </label>
+        <label><?= htmlspecialchars(cms_t('admin.verify2fa.file', 'Plik .mijauth')) ?>
             <input type="file" name="mijauth_file" accept=".mijauth,.txt,application/octet-stream">
         </label>
-        <label>Lub wklej zawartosc pliku .mijauth
-            <textarea name="mijauth_content" placeholder="Wklej zawartosc pliku"></textarea>
+        <label><?= htmlspecialchars(cms_t('admin.verify2fa.or_paste', 'Lub wklej zawartosc pliku .mijauth')) ?>
+            <textarea name="mijauth_content" placeholder="<?= htmlspecialchars(cms_t('admin.verify2fa.paste_placeholder', 'Wklej zawartosc pliku')) ?>"></textarea>
         </label>
-        <button class="btn" type="submit">Potwierdz 2FA</button>
+        <button class="btn" type="submit"><?= htmlspecialchars(cms_t('admin.verify2fa.submit', 'Potwierdz 2FA')) ?></button>
     </form>
 </div>
 </body>

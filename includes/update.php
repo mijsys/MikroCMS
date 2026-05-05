@@ -368,9 +368,9 @@ function cms_install_or_update_core_from_manifest(): array
         foreach ($copyEntries as $entry) {
             $sourcePath = $sourceRoot . '/' . $entry;
             $targetPath = $targetRoot . '/' . $entry;
-            if (file_exists($targetPath)) {
-                cms_core_delete_path($targetPath);
-            }
+
+            // Kopiujemy nadpisujaco, bez wstepnego usuwania katalogu docelowego.
+            // To eliminuje ryzyko "wyczyszczenia" projektu, gdy kopiowanie przerwie sie w polowie.
             cms_core_copy_path($sourcePath, $targetPath);
             $replacedEntries[] = $entry;
         }
@@ -387,10 +387,12 @@ function cms_install_or_update_core_from_manifest(): array
         foreach ($replacedEntries as $entry) {
             $targetPath = $targetRoot . '/' . $entry;
             $backupPath = $backupDir . '/' . $entry;
-            cms_core_delete_path($targetPath);
-
             if (!empty($backedUpEntries[$entry]) && file_exists($backupPath)) {
+                // Przywracamy tylko wpisy, ktore istnialy przed aktualizacja.
                 cms_core_copy_path($backupPath, $targetPath);
+            } else {
+                // Usuwamy wyłącznie nowe wpisy dodane przez nieudana aktualizacje.
+                cms_core_delete_path($targetPath);
             }
         }
         throw $e;

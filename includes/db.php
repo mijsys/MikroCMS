@@ -137,6 +137,7 @@ function cms_init_db(PDO $db): void
             twofa_totp_secret VARCHAR(128) NOT NULL DEFAULT '',
             twofa_mijauth_key TEXT NULL,
             twofa_mijauth_token VARCHAR(191) NULL,
+            twofa_recovery_codes LONGTEXT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
@@ -210,6 +211,7 @@ function cms_init_db(PDO $db): void
             "ALTER TABLE cms_users ADD COLUMN twofa_totp_secret VARCHAR(128) NOT NULL DEFAULT ''",
             "ALTER TABLE cms_users ADD COLUMN twofa_mijauth_key TEXT NULL",
             "ALTER TABLE cms_users ADD COLUMN twofa_mijauth_token VARCHAR(191) NULL",
+            "ALTER TABLE cms_users ADD COLUMN twofa_recovery_codes LONGTEXT NULL",
         ] as $sql) {
             try {
                 $db->exec($sql);
@@ -232,6 +234,7 @@ function cms_init_db(PDO $db): void
             twofa_totp_secret TEXT NOT NULL DEFAULT '',
             twofa_mijauth_key TEXT,
             twofa_mijauth_token TEXT,
+            twofa_recovery_codes TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )");
 
@@ -306,6 +309,7 @@ function cms_init_db(PDO $db): void
             "ALTER TABLE cms_users ADD COLUMN twofa_totp_secret TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE cms_users ADD COLUMN twofa_mijauth_key TEXT",
             "ALTER TABLE cms_users ADD COLUMN twofa_mijauth_token TEXT",
+            "ALTER TABLE cms_users ADD COLUMN twofa_recovery_codes TEXT",
         ] as $sql) {
             try {
                 $db->exec($sql);
@@ -330,6 +334,7 @@ function cms_init_db(PDO $db): void
         ['theme_variant', 'multipage'],
         ['site_default_language', 'pl'],
         ['site_enabled_languages', 'pl,en'],
+        ['admin_language', 'pl'],
         ['cms_update_manifest_url', CMS_DEFAULT_UPDATE_MANIFEST_URL],
         ['store_db_manifest_url', CMS_DEFAULT_STORE_MANIFEST_URL],
         ['plugin_store_manifest_url', CMS_DEFAULT_PLUGIN_MANIFEST_URL],
@@ -373,6 +378,58 @@ function cms_init_db(PDO $db): void
         ['en', 'error.404_excerpt', 'Page not found.'],
         ['en', 'error.404_heading', 'Page not found.'],
         ['en', 'error.404_message', 'Check the address or create a new page in CMS panel.'],
+
+        ['en', 'admin.nav.panel', 'Management panel'],
+        ['en', 'admin.nav.dashboard', 'Dashboard'],
+        ['en', 'admin.nav.pages', 'Pages'],
+        ['en', 'admin.nav.plugins', 'Plugins'],
+        ['en', 'admin.nav.appearance', 'Appearance'],
+        ['en', 'admin.nav.settings', 'Settings'],
+        ['en', 'admin.nav.preview', 'Site preview'],
+        ['en', 'admin.nav.logout', 'Log out'],
+        ['en', 'admin.nav.logged_as', 'Logged in as:'],
+        ['en', 'admin.flash.csrf_invalid', 'Invalid security token.'],
+        ['en', 'admin.logout.success', 'You have been logged out from CMS.'],
+
+        ['en', 'admin.login.title', 'CMS Login'],
+        ['en', 'admin.login.heading', 'CMS Admin'],
+        ['en', 'admin.login.desc', 'Log in to the management panel.'],
+        ['en', 'admin.login.username', 'Username'],
+        ['en', 'admin.login.password', 'Password'],
+        ['en', 'admin.login.submit', 'Sign in'],
+        ['en', 'admin.login.error.credentials', 'Invalid username or password.'],
+
+        ['en', 'admin.verify2fa.title', '2FA Verification'],
+        ['en', 'admin.verify2fa.heading', '2FA Verification'],
+        ['en', 'admin.verify2fa.user', 'User:'],
+        ['en', 'admin.verify2fa.submit', 'Confirm 2FA'],
+        ['en', 'admin.verify2fa.failed', '2FA verification failed (code or .mijauth file).'],
+        ['en', 'admin.verify2fa.session_expired', '2FA session expired. Please log in again.'],
+
+        ['en', 'admin.dashboard.title', 'CMS Dashboard'],
+        ['en', 'admin.dashboard.heading', 'CMS Dashboard'],
+        ['en', 'admin.dashboard.updates.heading', 'System updates'],
+        ['en', 'admin.dashboard.updates.available', 'New updates are available to install.'],
+        ['en', 'admin.dashboard.updates.current', 'System is up to date.'],
+        ['en', 'admin.dashboard.btn.update_core', 'Update CMS'],
+
+        ['en', 'admin.pages.title', 'CMS Pages'],
+        ['en', 'admin.pages.heading', 'Pages and subpages'],
+        ['en', 'admin.pages.form.save', 'Save page'],
+        ['en', 'admin.pages.list.heading', 'Page and subpage list'],
+
+        ['en', 'admin.plugins.title', 'CMS Plugins'],
+        ['en', 'admin.plugins.heading', 'Plugins'],
+        ['en', 'admin.plugins.local.heading', 'Local plugins'],
+
+        ['en', 'admin.appearance.title', 'CMS Appearance'],
+        ['en', 'admin.appearance.heading', 'Site appearance'],
+        ['en', 'admin.appearance.btn.save', 'Save site style'],
+
+        ['en', 'admin.settings.title', 'CMS Settings'],
+        ['en', 'admin.settings.heading', 'CMS Settings'],
+        ['en', 'admin.settings.general', 'General settings'],
+        ['en', 'admin.settings.saved', 'CMS settings were saved.'],
     ];
 
     if (cms_db_driver() === 'mysql') {

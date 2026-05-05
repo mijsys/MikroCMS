@@ -12,7 +12,7 @@ $db = cms_db();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!cms_verify_csrf($_POST['csrf_token'] ?? null)) {
-        cms_flash('error', 'Nieprawidlowy token bezpieczenstwa.');
+        cms_flash('error', cms_t('admin.flash.csrf_invalid', 'Nieprawidlowy token bezpieczenstwa.'));
         cms_redirect(cms_url('admin/dashboard.php'));
     }
 
@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = (string) ($_POST['action'] ?? '');
         if ($action === 'update_core') {
             $result = cms_install_or_update_core_from_manifest();
-            cms_flash('success', 'CMS zostal zaktualizowany z wersji ' . $result['from'] . ' do ' . $result['to'] . '.');
+            cms_flash('success', cms_t('admin.dashboard.flash.core_updated', 'CMS zostal zaktualizowany z wersji ') . $result['from'] . cms_t('admin.dashboard.flash.core_updated_to', ' do ') . $result['to'] . '.');
         }
     } catch (Throwable $e) {
         cms_flash('error', $e->getMessage());
@@ -49,35 +49,35 @@ $hasAnyUpdates = !empty($coreUpdate['has_update']) || $pluginUpdateCount > 0;
 $coreDownloadUrl = cms_core_update_download_url($coreUpdate);
 ?>
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="<?= htmlspecialchars(cms_admin_language()) ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard CMS</title>
+    <title><?= htmlspecialchars(cms_t('admin.dashboard.title', 'Dashboard CMS')) ?></title>
     <link rel="stylesheet" href="<?= htmlspecialchars(cms_url('admin/assets/dashboard.css')) ?>">
 </head>
 <body>
 <div class="layout">
     <aside class="sidebar">
         <div class="brand">CMS</div>
-        <div class="muted">Panel zarzadzania</div>
+        <div class="muted"><?= htmlspecialchars(cms_t('admin.nav.panel', 'Panel zarzadzania')) ?></div>
         <nav class="nav">
-            <a href="<?= htmlspecialchars(cms_url('admin/dashboard.php')) ?>" class="active">Dashboard</a>
-            <a href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>">Strony</a>
-            <a href="<?= htmlspecialchars(cms_url('admin/plugins.php')) ?>">Pluginy</a>
-            <a href="<?= htmlspecialchars(cms_url('admin/appearance.php')) ?>">Wyglad</a>
-            <a href="<?= htmlspecialchars(cms_url('admin/settings.php')) ?>">Ustawienia</a>
-            <a href="<?= htmlspecialchars(cms_url()) ?>" target="_blank">Podglad strony</a>
-            <a href="<?= htmlspecialchars(cms_url('admin/logout.php')) ?>">Wyloguj</a>
+            <a href="<?= htmlspecialchars(cms_url('admin/dashboard.php')) ?>" class="active"><?= htmlspecialchars(cms_t('admin.nav.dashboard', 'Dashboard')) ?></a>
+            <a href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>"><?= htmlspecialchars(cms_t('admin.nav.pages', 'Strony')) ?></a>
+            <a href="<?= htmlspecialchars(cms_url('admin/plugins.php')) ?>"><?= htmlspecialchars(cms_t('admin.nav.plugins', 'Pluginy')) ?></a>
+            <a href="<?= htmlspecialchars(cms_url('admin/appearance.php')) ?>"><?= htmlspecialchars(cms_t('admin.nav.appearance', 'Wyglad')) ?></a>
+            <a href="<?= htmlspecialchars(cms_url('admin/settings.php')) ?>"><?= htmlspecialchars(cms_t('admin.nav.settings', 'Ustawienia')) ?></a>
+            <a href="<?= htmlspecialchars(cms_url()) ?>" target="_blank"><?= htmlspecialchars(cms_t('admin.nav.preview', 'Podglad strony')) ?></a>
+            <a href="<?= htmlspecialchars(cms_url('admin/logout.php')) ?>"><?= htmlspecialchars(cms_t('admin.nav.logout', 'Wyloguj')) ?></a>
         </nav>
-        <div style="margin-top:24px" class="muted">Zalogowany: <?= htmlspecialchars($user['username'] ?? 'admin') ?></div>
+        <div style="margin-top:24px" class="muted"><?= htmlspecialchars(cms_t('admin.nav.logged_as', 'Zalogowany:')) ?> <?= htmlspecialchars($user['username'] ?? 'admin') ?></div>
     </aside>
 
     <main class="main">
         <div class="topbar">
             <div>
-                <h1 style="margin:0 0 6px">Dashboard CMS</h1>
-                <div class="muted">Wszystkie funkcje sa dostepne jako osobne podstrony panelu.</div>
+                <h1 style="margin:0 0 6px"><?= htmlspecialchars(cms_t('admin.dashboard.heading', 'Dashboard CMS')) ?></h1>
+                <div class="muted"><?= htmlspecialchars(cms_t('admin.dashboard.subheading', 'Wszystkie funkcje sa dostepne jako osobne podstrony panelu.')) ?></div>
             </div>
         </div>
 
@@ -86,52 +86,52 @@ $coreDownloadUrl = cms_core_update_download_url($coreUpdate);
         <?php endif; ?>
 
         <section class="panel" style="margin-bottom:20px; border-color: <?= $hasAnyUpdates ? 'rgba(251,191,36,.55)' : 'rgba(22,163,74,.5)' ?>;">
-            <h2 style="margin-top:0">Aktualizacje systemu</h2>
+            <h2 style="margin-top:0"><?= htmlspecialchars(cms_t('admin.dashboard.updates.heading', 'Aktualizacje systemu')) ?></h2>
             <?php if ($hasAnyUpdates): ?>
-                <p style="margin:0 0 10px; color:#fbbf24; font-weight:700">Masz nowe aktualizacje do zainstalowania.</p>
+                <p style="margin:0 0 10px; color:#fbbf24; font-weight:700"><?= htmlspecialchars(cms_t('admin.dashboard.updates.available', 'Masz nowe aktualizacje do zainstalowania.')) ?></p>
             <?php else: ?>
-                <p style="margin:0 0 10px; color:#86efac; font-weight:700">System jest aktualny.</p>
+                <p style="margin:0 0 10px; color:#86efac; font-weight:700"><?= htmlspecialchars(cms_t('admin.dashboard.updates.current', 'System jest aktualny.')) ?></p>
             <?php endif; ?>
 
             <div class="split" style="margin-bottom:12px">
                 <div class="card" style="padding:14px">
-                    <div class="muted">Core CMS</div>
+                    <div class="muted"><?= htmlspecialchars(cms_t('admin.dashboard.core', 'Core CMS')) ?></div>
                     <div style="font-size:18px;font-weight:800;margin-top:6px">
                         <?= htmlspecialchars((string) $coreUpdate['current_version']) ?>
                         <?php if (!empty($coreUpdate['checked'])): ?>
                             <span class="muted" style="font-size:14px"> -> <?= htmlspecialchars((string) $coreUpdate['remote_version']) ?></span>
                         <?php endif; ?>
                     </div>
-                    <div class="muted" style="font-size:12px;margin-top:4px">Kod: <?= htmlspecialchars(CMS_CODE_VERSION) ?></div>
+                    <div class="muted" style="font-size:12px;margin-top:4px"><?= htmlspecialchars(cms_t('admin.dashboard.code', 'Kod:')) ?> <?= htmlspecialchars(CMS_CODE_VERSION) ?></div>
                     <div style="margin-top:8px">
                         <?php if (!empty($coreUpdate['has_update'])): ?>
-                            <span class="badge" style="background:rgba(251,191,36,.14);color:#fbbf24">Nowa wersja dostepna</span>
+                            <span class="badge" style="background:rgba(251,191,36,.14);color:#fbbf24"><?= htmlspecialchars(cms_t('admin.dashboard.core.new_version', 'Nowa wersja dostepna')) ?></span>
                         <?php elseif (!empty($coreUpdate['checked'])): ?>
-                            <span class="badge ok">Aktualny</span>
+                            <span class="badge ok"><?= htmlspecialchars(cms_t('admin.dashboard.core.current', 'Aktualny')) ?></span>
                         <?php else: ?>
-                            <span class="badge off">Brak polaczenia z manifestem</span>
+                            <span class="badge off"><?= htmlspecialchars(cms_t('admin.dashboard.core.no_manifest', 'Brak polaczenia z manifestem')) ?></span>
                         <?php endif; ?>
                     </div>
                 </div>
 
                 <div class="card" style="padding:14px">
-                    <div class="muted">Pluginy</div>
+                    <div class="muted"><?= htmlspecialchars(cms_t('admin.dashboard.plugins', 'Pluginy')) ?></div>
                     <div style="font-size:18px;font-weight:800;margin-top:6px">
                         <?= $pluginUpdateCount ?>
-                        <span class="muted" style="font-size:14px"> aktualizacji / <?= count($plugins) ?> zainstalowanych</span>
+                        <span class="muted" style="font-size:14px"> <?= htmlspecialchars(cms_t('admin.dashboard.plugins.updates', 'aktualizacji /')) ?> <?= count($plugins) ?> <?= htmlspecialchars(cms_t('admin.dashboard.plugins.installed', 'zainstalowanych')) ?></span>
                     </div>
                     <div style="margin-top:8px">
                         <?php if ($pluginUpdateCount > 0): ?>
-                            <span class="badge" style="background:rgba(251,191,36,.14);color:#fbbf24">Wymagana aktualizacja pluginow</span>
+                            <span class="badge" style="background:rgba(251,191,36,.14);color:#fbbf24"><?= htmlspecialchars(cms_t('admin.dashboard.plugins.need_update', 'Wymagana aktualizacja pluginow')) ?></span>
                         <?php else: ?>
-                            <span class="badge ok">Pluginy aktualne</span>
+                            <span class="badge ok"><?= htmlspecialchars(cms_t('admin.dashboard.plugins.current', 'Pluginy aktualne')) ?></span>
                         <?php endif; ?>
                     </div>
                 </div>
             </div>
 
             <?php if ($pluginUpdateCount > 0): ?>
-                <div class="muted" style="margin-bottom:10px">Do aktualizacji:</div>
+                <div class="muted" style="margin-bottom:10px"><?= htmlspecialchars(cms_t('admin.dashboard.plugins.to_update', 'Do aktualizacji:')) ?></div>
                 <div class="actions" style="margin-bottom:14px">
                     <?php foreach ($pluginsWithUpdate as $info): ?>
                         <?php $remote = (array) ($info['remote'] ?? []); ?>
@@ -150,50 +150,50 @@ $coreDownloadUrl = cms_core_update_download_url($coreUpdate);
                     <form method="post">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
                         <input type="hidden" name="action" value="update_core">
-                        <button class="btn" type="submit">Aktualizuj CMS</button>
+                        <button class="btn" type="submit"><?= htmlspecialchars(cms_t('admin.dashboard.btn.update_core', 'Aktualizuj CMS')) ?></button>
                     </form>
                 <?php else: ?>
-                    <button class="btn secondary" type="button" disabled style="opacity:.55;cursor:not-allowed">Aktualizuj CMS</button>
+                    <button class="btn secondary" type="button" disabled style="opacity:.55;cursor:not-allowed"><?= htmlspecialchars(cms_t('admin.dashboard.btn.update_core', 'Aktualizuj CMS')) ?></button>
                 <?php endif; ?>
-                <a class="btn" href="<?= htmlspecialchars(cms_url('admin/plugins.php')) ?>">Przejdz do aktualizacji pluginow</a>
-                <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/settings.php')) ?>">Ustawienia zrodel aktualizacji</a>
+                <a class="btn" href="<?= htmlspecialchars(cms_url('admin/plugins.php')) ?>"><?= htmlspecialchars(cms_t('admin.dashboard.btn.plugin_updates', 'Przejdz do aktualizacji pluginow')) ?></a>
+                <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/settings.php')) ?>"><?= htmlspecialchars(cms_t('admin.dashboard.btn.update_sources', 'Ustawienia zrodel aktualizacji')) ?></a>
             </div>
         </section>
 
         <section class="cards">
-            <div class="card"><div class="muted">Wszystkie strony</div><div style="font-size:32px;font-weight:800"><?= $pageCount ?></div></div>
-            <div class="card"><div class="muted">Podstrony</div><div style="font-size:32px;font-weight:800"><?= $subpageCount ?></div></div>
-            <div class="card"><div class="muted">Opublikowane</div><div style="font-size:32px;font-weight:800"><?= $publishedCount ?></div></div>
-            <div class="card"><div class="muted">Aktywne pluginy</div><div style="font-size:32px;font-weight:800"><?= $enabledPlugins ?></div></div>
+            <div class="card"><div class="muted"><?= htmlspecialchars(cms_t('admin.dashboard.stats.pages', 'Wszystkie strony')) ?></div><div style="font-size:32px;font-weight:800"><?= $pageCount ?></div></div>
+            <div class="card"><div class="muted"><?= htmlspecialchars(cms_t('admin.dashboard.stats.subpages', 'Podstrony')) ?></div><div style="font-size:32px;font-weight:800"><?= $subpageCount ?></div></div>
+            <div class="card"><div class="muted"><?= htmlspecialchars(cms_t('admin.dashboard.stats.published', 'Opublikowane')) ?></div><div style="font-size:32px;font-weight:800"><?= $publishedCount ?></div></div>
+            <div class="card"><div class="muted"><?= htmlspecialchars(cms_t('admin.dashboard.stats.active_plugins', 'Aktywne pluginy')) ?></div><div style="font-size:32px;font-weight:800"><?= $enabledPlugins ?></div></div>
         </section>
 
         <div class="grid">
             <div class="stack">
                 <section class="panel">
-                    <h2>Praca z trescia</h2>
-                    <p class="muted">Zarzadzaj stronami i podstronami oraz builderem blokow.</p>
+                    <h2><?= htmlspecialchars(cms_t('admin.dashboard.content.heading', 'Praca z trescia')) ?></h2>
+                    <p class="muted"><?= htmlspecialchars(cms_t('admin.dashboard.content.desc', 'Zarzadzaj stronami i podstronami oraz builderem blokow.')) ?></p>
                     <div class="actions">
-                        <a class="btn" href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>">Przejdz do Stron</a>
-                        <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>?edit=">Dodaj strone</a>
+                        <a class="btn" href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>"><?= htmlspecialchars(cms_t('admin.dashboard.btn.goto_pages', 'Przejdz do Stron')) ?></a>
+                        <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>?edit="><?= htmlspecialchars(cms_t('admin.dashboard.btn.add_page', 'Dodaj strone')) ?></a>
                     </div>
                 </section>
 
                 <section class="panel">
-                    <h2>Pluginy i rozmieszczenie</h2>
-                    <p class="muted">Instaluj i aktualizuj pluginy ze sklepu, a potem umieszczaj je na stronach (drag and drop + pozycja).</p>
+                    <h2><?= htmlspecialchars(cms_t('admin.dashboard.plugins_layout.heading', 'Pluginy i rozmieszczenie')) ?></h2>
+                    <p class="muted"><?= htmlspecialchars(cms_t('admin.dashboard.plugins_layout.desc', 'Instaluj i aktualizuj pluginy ze sklepu, a potem umieszczaj je na stronach (drag and drop + pozycja).')) ?></p>
                     <div class="actions">
-                        <a class="btn" href="<?= htmlspecialchars(cms_url('admin/plugins.php')) ?>">Przejdz do Pluginow</a>
+                        <a class="btn" href="<?= htmlspecialchars(cms_url('admin/plugins.php')) ?>"><?= htmlspecialchars(cms_t('admin.dashboard.btn.goto_plugins', 'Przejdz do Pluginow')) ?></a>
                     </div>
                 </section>
             </div>
 
             <div class="stack">
                 <section class="panel">
-                    <h2>Wyglad i konfiguracja</h2>
-                    <p class="muted">Edytor wygladu calej witryny oraz ustawienia systemowe sa rozdzielone na podstrony.</p>
+                    <h2><?= htmlspecialchars(cms_t('admin.dashboard.appearance.heading', 'Wyglad i konfiguracja')) ?></h2>
+                    <p class="muted"><?= htmlspecialchars(cms_t('admin.dashboard.appearance.desc', 'Edytor wygladu calej witryny oraz ustawienia systemowe sa rozdzielone na podstrony.')) ?></p>
                     <div class="actions">
-                        <a class="btn" href="<?= htmlspecialchars(cms_url('admin/appearance.php')) ?>">Wyglad</a>
-                        <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/settings.php')) ?>">Ustawienia</a>
+                        <a class="btn" href="<?= htmlspecialchars(cms_url('admin/appearance.php')) ?>"><?= htmlspecialchars(cms_t('admin.nav.appearance', 'Wyglad')) ?></a>
+                        <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/settings.php')) ?>"><?= htmlspecialchars(cms_t('admin.nav.settings', 'Ustawienia')) ?></a>
                     </div>
                 </section>
 

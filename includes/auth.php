@@ -86,6 +86,70 @@ function cms_user_has_2fa(array $user): bool
         && trim((string) ($user['twofa_mijauth_token'] ?? '')) !== '';
 }
 
+function cms_generate_2fa_recovery_codes(int $count = 10): array
+{
+    $count = max(5, min(20, $count));
+    $codes = [];
+    for ($i = 0; $i < $count; $i++) {
+        $raw = strtoupper(bin2hex(random_bytes(4)));
+        $codes[] = substr($raw, 0, 4) . '-' . substr($raw, 4, 4);
+    }
+    return $codes;
+}
+
+function cms_hash_2fa_recovery_codes(array $codes): array
+{
+    $hashed = [];
+    foreach ($codes as $code) {
+        $normalized = strtoupper(trim((string) $code));
+        if ($normalized === '') {
+            continue;
+        }
+        $hashed[] = password_hash($normalized, PASSWORD_DEFAULT);
+    }
+    return $hashed;
+}
+
+function cms_verify_and_consume_recovery_code(array $user, string $inputCode): bool
+{
+    $inputCode = strtoupper(trim($inputCode));
+    if ($inputCode === '') {
+        return false;
+    }
+
+    $raw = trim((string) ($user['twofa_recovery_codes'] ?? ''));
+    if ($raw === '') {
+        return false;
+    }
+
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        return false;
+    }
+
+    $remaining = [];
+    $matched = false;
+    foreach ($decoded as $hash) {
+        if (!is_string($hash) || $hash === '') {
+            continue;
+        }
+        if (!$matched && password_verify($inputCode, $hash)) {
+            $matched = true;
+            continue;
+        }
+        $remaining[] = $hash;
+    }
+
+    if (!$matched) {
+        return false;
+    }
+
+    cms_db()->prepare('UPDATE cms_users SET twofa_recovery_codes = ? WHERE id = ?')
+        ->execute([json_encode($remaining, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), (int) ($user['id'] ?? 0)]);
+
+    return true;
+}
+
 function cms_pending_2fa_user(): ?array
 {
     cms_session_start();
@@ -160,7 +224,7 @@ function cms_2fa_clear_throttle(int $userId): void
     }
 }
 
-function cms_verify_2fa_login(array $user, string $totpCode, string $mijauthFileContent): bool
+function cms_verify_2fa_login(array $user, string $totpCode, string $mijauthFileContent, string $recoveryCode = ''): bool
 {
     $secret = trim((string) ($user['twofa_totp_secret'] ?? ''));
     $userKey = trim((string) ($user['twofa_mijauth_key'] ?? ''));
@@ -171,8 +235,14 @@ function cms_verify_2fa_login(array $user, string $totpCode, string $mijauthFile
         return false;
     }
 
-    if (!MijAuth::verifyTotp($secret, $totpCode)) {
-        return false;
+    if ($recoveryCode !== '') {
+        if (!cms_verify_and_consume_recovery_code($user, $recoveryCode)) {
+            return false;
+        }
+    } else {
+        if (!MijAuth::verifyTotp($secret, $totpCode)) {
+            return false;
+        }
     }
 
     return MijAuth::verifyAuthFileWithToken($mijauthFileContent, $userKey, $token, $userId);
@@ -200,22 +270,28 @@ function cms_current_user(): ?array
         return null;
     }
 
-    $stmt = cms_db()->prepare('SELECT id, username, email, role, twofa_enabled, twofa_totp_secret, twofa_mijauth_key, twofa_mijauth_token FROM cms_users WHERE id = ?');
+    $stmt = cms_db()->prepare('SELECT id, username, email, role, twofa_enabled, twofa_totp_secret, twofa_mijauth_key, twofa_mijauth_token, twofa_recovery_codes FROM cms_users WHERE id = ?');
     $stmt->execute([(int) $_SESSION['cms_user_id']]);
     $user = $stmt->fetch();
 
     return $user ?: null;
 }
 
-function cms_update_user_2fa_setup(int $userId, string $totpSecret, string $mijauthKeyBase64, string $mijauthToken, bool $enabled): void
+function cms_update_user_2fa_setup(int $userId, string $totpSecret, string $mijauthKeyBase64, string $mijauthToken, bool $enabled, ?string $recoveryCodesJson = null): void
 {
+    if ($recoveryCodesJson !== null) {
+        cms_db()->prepare('UPDATE cms_users SET twofa_totp_secret = ?, twofa_mijauth_key = ?, twofa_mijauth_token = ?, twofa_recovery_codes = ?, twofa_enabled = ? WHERE id = ?')
+            ->execute([$totpSecret, $mijauthKeyBase64, $mijauthToken, $recoveryCodesJson, $enabled ? 1 : 0, $userId]);
+        return;
+    }
+
     cms_db()->prepare('UPDATE cms_users SET twofa_totp_secret = ?, twofa_mijauth_key = ?, twofa_mijauth_token = ?, twofa_enabled = ? WHERE id = ?')
         ->execute([$totpSecret, $mijauthKeyBase64, $mijauthToken, $enabled ? 1 : 0, $userId]);
 }
 
 function cms_disable_user_2fa(int $userId): void
 {
-    cms_db()->prepare('UPDATE cms_users SET twofa_totp_secret = ?, twofa_mijauth_key = NULL, twofa_mijauth_token = NULL, twofa_enabled = 0 WHERE id = ?')
+    cms_db()->prepare('UPDATE cms_users SET twofa_totp_secret = ?, twofa_mijauth_key = NULL, twofa_mijauth_token = NULL, twofa_recovery_codes = NULL, twofa_enabled = 0 WHERE id = ?')
         ->execute(['', $userId]);
 }
 
@@ -230,14 +306,18 @@ function cms_generate_user_2fa_bootstrap(array $user): array
     $totpSecret = MijAuth::generateTotpSecret();
     $mijauthKey = MijAuth::generateUserKey();
     $authFile = MijAuth::createAuthFile($userId, $mijauthKey, MijAuth::generateDeviceHash());
+    $recoveryCodes = cms_generate_2fa_recovery_codes();
+    $recoveryHashes = cms_hash_2fa_recovery_codes($recoveryCodes);
+    $recoveryCodesJson = json_encode($recoveryHashes, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-    cms_update_user_2fa_setup((int) $userId, $totpSecret, $mijauthKey, (string) $authFile['token'], false);
+    cms_update_user_2fa_setup((int) $userId, $totpSecret, $mijauthKey, (string) $authFile['token'], false, is_string($recoveryCodesJson) ? $recoveryCodesJson : '[]');
 
     return [
         'totp_secret' => $totpSecret,
         'provisioning_uri' => MijAuth::getTotpProvisioningUri($username, $totpSecret, 'MikroCMS'),
         'mijauth_file_content' => (string) $authFile['file_content'],
         'mijauth_token' => (string) $authFile['token'],
+        'recovery_codes_file_content' => "MikroCMS recovery codes for user {$username} (ID {$userId})\n\n" . implode("\n", $recoveryCodes) . "\n\nEach code can be used only once. Store this file securely.\n",
     ];
 }
 

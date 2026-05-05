@@ -14,11 +14,11 @@ $error = '';
 $flash = cms_pull_flash();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!cms_verify_csrf($_POST['csrf_token'] ?? null)) {
-        $error = 'Nieprawidlowy token bezpieczenstwa.';
+        $error = cms_t('admin.flash.csrf_invalid', 'Nieprawidlowy token bezpieczenstwa.');
     } else {
         $user = cms_authenticate_credentials((string) ($_POST['username'] ?? ''), (string) ($_POST['password'] ?? ''));
         if (!$user) {
-            $error = 'Nieprawidlowy login lub haslo.';
+            $error = cms_t('admin.login.error.credentials', 'Nieprawidlowy login lub haslo.');
         } elseif (cms_user_has_2fa($user)) {
             cms_session_start();
             $_SESSION['cms_pending_2fa_user_id'] = (int) $user['id'];
@@ -31,11 +31,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="<?= htmlspecialchars(cms_admin_language()) ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logowanie CMS</title>
+    <title><?= htmlspecialchars(cms_t('admin.login.title', 'Logowanie CMS')) ?></title>
     <style>
         body{font-family:system-ui,-apple-system,sans-serif;background:#020617;color:#e2e8f0;display:grid;place-items:center;min-height:100vh;margin:0}
         .box{width:min(420px,92vw);background:#0f172a;border:1px solid #334155;border-radius:20px;padding:28px;box-shadow:0 24px 80px rgba(0,0,0,.35)}
@@ -45,15 +45,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <div class="box">
-    <h1>CMS Admin</h1>
-    <p>Zaloguj sie do panelu zarzadzania.</p>
+    <h1><?= htmlspecialchars(cms_t('admin.login.heading', 'CMS Admin')) ?></h1>
+    <p><?= htmlspecialchars(cms_t('admin.login.desc', 'Zaloguj sie do panelu zarzadzania.')) ?></p>
     <?php if ($flash): ?><div class="msg ok"><?= htmlspecialchars($flash['message']) ?></div><?php endif; ?>
     <?php if ($error !== ''): ?><div class="msg err"><?= htmlspecialchars($error) ?></div><?php endif; ?>
     <form method="post">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
-        <label>Login<input type="text" name="username" required autofocus></label>
-        <label>Haslo<input type="password" name="password" required></label>
-        <button class="btn" type="submit">Zaloguj sie</button>
+        <label><?= htmlspecialchars(cms_t('admin.login.username', 'Login')) ?><input type="text" name="username" required autofocus></label>
+        <label><?= htmlspecialchars(cms_t('admin.login.password', 'Haslo')) ?><input type="password" name="password" required></label>
+        <button class="btn" type="submit"><?= htmlspecialchars(cms_t('admin.login.submit', 'Zaloguj sie')) ?></button>
     </form>
 </div>
 </body>

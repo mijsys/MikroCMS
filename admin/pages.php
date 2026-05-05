@@ -18,7 +18,7 @@ if (!in_array($editorLang, $enabledLangs, true)) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!cms_verify_csrf($_POST['csrf_token'] ?? null)) {
-        cms_flash('error', 'Nieprawidlowy token bezpieczenstwa.');
+        cms_flash('error', cms_t('admin.flash.csrf_invalid', 'Nieprawidlowy token bezpieczenstwa.'));
         cms_redirect(cms_url('admin/pages.php'));
     }
 
@@ -32,11 +32,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($editLangPost !== $defaultLang) {
                     cms_save_page_translation($savedId, $editLangPost, $_POST);
                 }
-                cms_flash('success', $id ? 'Strona zostala zaktualizowana.' : 'Strona zostala dodana.');
+                cms_flash('success', $id ? cms_t('admin.pages.flash.updated', 'Strona zostala zaktualizowana.') : cms_t('admin.pages.flash.created', 'Strona zostala dodana.'));
                 break;
             case 'delete_page':
                 cms_delete_page((int) ($_POST['page_id'] ?? 0));
-                cms_flash('success', 'Strona zostala usunieta.');
+                cms_flash('success', cms_t('admin.pages.flash.deleted', 'Strona zostala usunieta.'));
                 break;
         }
     } catch (Throwable $e) {
@@ -72,41 +72,41 @@ foreach ($pages as $pageItem) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="<?= htmlspecialchars(cms_admin_language()) ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strony CMS</title>
+    <title><?= htmlspecialchars(cms_t('admin.pages.title', 'Strony CMS')) ?></title>
     <link rel="stylesheet" href="<?= htmlspecialchars(cms_url('admin/assets/dashboard.css')) ?>">
 </head>
 <body>
 <div class="layout">
     <aside class="sidebar">
         <div class="brand">CMS</div>
-        <div class="muted">Panel zarzadzania</div>
+        <div class="muted"><?= htmlspecialchars(cms_t('admin.nav.panel', 'Panel zarzadzania')) ?></div>
         <nav class="nav">
-            <a href="<?= htmlspecialchars(cms_url('admin/dashboard.php')) ?>">Dashboard</a>
-            <a href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>" class="active">Strony</a>
-            <a href="<?= htmlspecialchars(cms_url('admin/plugins.php')) ?>">Pluginy</a>
-            <a href="<?= htmlspecialchars(cms_url('admin/appearance.php')) ?>">Wyglad</a>
-            <a href="<?= htmlspecialchars(cms_url('admin/settings.php')) ?>">Ustawienia</a>
-            <a href="<?= htmlspecialchars(cms_url()) ?>" target="_blank">Podglad strony</a>
-            <a href="<?= htmlspecialchars(cms_url('admin/logout.php')) ?>">Wyloguj</a>
+            <a href="<?= htmlspecialchars(cms_url('admin/dashboard.php')) ?>"><?= htmlspecialchars(cms_t('admin.nav.dashboard', 'Dashboard')) ?></a>
+            <a href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>" class="active"><?= htmlspecialchars(cms_t('admin.nav.pages', 'Strony')) ?></a>
+            <a href="<?= htmlspecialchars(cms_url('admin/plugins.php')) ?>"><?= htmlspecialchars(cms_t('admin.nav.plugins', 'Pluginy')) ?></a>
+            <a href="<?= htmlspecialchars(cms_url('admin/appearance.php')) ?>"><?= htmlspecialchars(cms_t('admin.nav.appearance', 'Wyglad')) ?></a>
+            <a href="<?= htmlspecialchars(cms_url('admin/settings.php')) ?>"><?= htmlspecialchars(cms_t('admin.nav.settings', 'Ustawienia')) ?></a>
+            <a href="<?= htmlspecialchars(cms_url()) ?>" target="_blank"><?= htmlspecialchars(cms_t('admin.nav.preview', 'Podglad strony')) ?></a>
+            <a href="<?= htmlspecialchars(cms_url('admin/logout.php')) ?>"><?= htmlspecialchars(cms_t('admin.nav.logout', 'Wyloguj')) ?></a>
         </nav>
-        <div style="margin-top:24px" class="muted">Zalogowany: <?= htmlspecialchars($user['username'] ?? 'admin') ?></div>
+        <div style="margin-top:24px" class="muted"><?= htmlspecialchars(cms_t('admin.nav.logged_as', 'Zalogowany:')) ?> <?= htmlspecialchars($user['username'] ?? 'admin') ?></div>
     </aside>
     <main class="main">
         <div class="topbar">
             <div>
-                <h1 style="margin:0 0 6px">Strony i podstrony</h1>
-                <div class="muted">Tworzenie stron, podstron i builder drag and drop.</div>
+                <h1 style="margin:0 0 6px"><?= htmlspecialchars(cms_t('admin.pages.heading', 'Strony i podstrony')) ?></h1>
+                <div class="muted"><?= htmlspecialchars(cms_t('admin.pages.subheading', 'Tworzenie stron, podstron i builder drag and drop.')) ?></div>
             </div>
             <form method="get" class="actions" style="align-items:center">
                 <?php if ($editPage && !empty($editPage['id'])): ?><input type="hidden" name="edit" value="<?= (int) $editPage['id'] ?>"><?php endif; ?>
-                <label class="muted" for="langSwitcher">Jezyk edycji</label>
+                <label class="muted" for="langSwitcher"><?= htmlspecialchars(cms_t('admin.pages.edit_lang', 'Jezyk edycji')) ?></label>
                 <select id="langSwitcher" name="lang" onchange="this.form.submit()">
                     <?php foreach ($enabledLangs as $langCode): ?>
-                        <option value="<?= htmlspecialchars($langCode) ?>" <?= $editorLang === $langCode ? 'selected' : '' ?>><?= strtoupper(htmlspecialchars($langCode)) ?><?= $langCode === $defaultLang ? ' (default)' : '' ?></option>
+                        <option value="<?= htmlspecialchars($langCode) ?>" <?= $editorLang === $langCode ? 'selected' : '' ?>><?= strtoupper(htmlspecialchars($langCode)) ?><?= $langCode === $defaultLang ? ' (' . htmlspecialchars(cms_t('admin.pages.default', 'default')) . ')' : '' ?></option>
                     <?php endforeach; ?>
                 </select>
             </form>
@@ -119,7 +119,7 @@ foreach ($pages as $pageItem) {
         <div class="grid">
             <div class="stack">
                 <section class="panel">
-                    <h2><?= $editPage ? 'Edytuj strone / podstrone' : 'Dodaj nowa strone / podstrone' ?></h2>
+                    <h2><?= htmlspecialchars($editPage ? cms_t('admin.pages.form.edit', 'Edytuj strone / podstrone') : cms_t('admin.pages.form.add', 'Dodaj nowa strone / podstrone')) ?></h2>
                     <form method="post" id="pageEditorForm">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
                         <input type="hidden" name="action" value="save_page">
@@ -128,35 +128,35 @@ foreach ($pages as $pageItem) {
                         <input type="hidden" name="builder_data" id="builderDataInputV2" value="<?= htmlspecialchars(json_encode($builderBlocks, JSON_UNESCAPED_UNICODE)) ?>">
 
                         <div class="split">
-                            <div class="field"><label>Tytul</label><input type="text" name="title" required value="<?= htmlspecialchars($editPage['title'] ?? '') ?>"></div>
-                            <div class="field"><label>Slug</label><input type="text" name="slug" value="<?= htmlspecialchars($editPage['slug'] ?? '') ?>"></div>
+                            <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.title', 'Tytul')) ?></label><input type="text" name="title" required value="<?= htmlspecialchars($editPage['title'] ?? '') ?>"></div>
+                            <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.slug', 'Slug')) ?></label><input type="text" name="slug" value="<?= htmlspecialchars($editPage['slug'] ?? '') ?>"></div>
                         </div>
 
                         <div class="split">
                             <div class="field">
-                                <label>Rodzic strony</label>
+                                <label><?= htmlspecialchars(cms_t('admin.pages.form.parent', 'Rodzic strony')) ?></label>
                                 <select name="parent_id">
-                                    <option value="">Brak rodzica</option>
+                                    <option value=""><?= htmlspecialchars(cms_t('admin.pages.form.no_parent', 'Brak rodzica')) ?></option>
                                     <?php foreach ($rootPages as $rootPage): ?>
                                         <?php if ($editPage && (int) $editPage['id'] === (int) $rootPage['id']) { continue; } ?>
                                         <option value="<?= (int) $rootPage['id'] ?>" <?= (($editPage['parent_id'] ?? null) == $rootPage['id']) ? 'selected' : '' ?>><?= htmlspecialchars($rootPage['title']) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="field"><label>Kolejnosc</label><input type="number" name="sort_order" value="<?= htmlspecialchars((string) ($editPage['sort_order'] ?? '0')) ?>"></div>
+                            <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.sort', 'Kolejnosc')) ?></label><input type="number" name="sort_order" value="<?= htmlspecialchars((string) ($editPage['sort_order'] ?? '0')) ?>"></div>
                         </div>
 
-                        <div class="field"><label>Lead / zajawka</label><textarea name="excerpt"><?= htmlspecialchars($editPage['excerpt'] ?? '') ?></textarea></div>
-                        <div class="field"><label>Tresc dodatkowa (fallback)</label><textarea name="content"><?= htmlspecialchars($editPage['content'] ?? '') ?></textarea></div>
+                        <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.excerpt', 'Lead / zajawka')) ?></label><textarea name="excerpt"><?= htmlspecialchars($editPage['excerpt'] ?? '') ?></textarea></div>
+                        <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.content', 'Tresc dodatkowa (fallback)')) ?></label><textarea name="content"><?= htmlspecialchars($editPage['content'] ?? '') ?></textarea></div>
 
                         <div class="split">
-                            <div class="field"><label>Status</label><select name="status"><option value="draft" <?= (($editPage['status'] ?? '') === 'draft') ? 'selected' : '' ?>>Szkic</option><option value="published" <?= (($editPage['status'] ?? '') === 'published') ? 'selected' : '' ?>>Opublikowana</option></select></div>
-                            <div class="field inline"><label><input type="checkbox" name="is_homepage" value="1" <?= !empty($editPage['is_homepage']) ? 'checked' : '' ?>> Ustaw jako strone glowna</label></div>
+                            <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.status', 'Status')) ?></label><select name="status"><option value="draft" <?= (($editPage['status'] ?? '') === 'draft') ? 'selected' : '' ?>><?= htmlspecialchars(cms_t('admin.pages.form.status.draft', 'Szkic')) ?></option><option value="published" <?= (($editPage['status'] ?? '') === 'published') ? 'selected' : '' ?>><?= htmlspecialchars(cms_t('admin.pages.form.status.published', 'Opublikowana')) ?></option></select></div>
+                            <div class="field inline"><label><input type="checkbox" name="is_homepage" value="1" <?= !empty($editPage['is_homepage']) ? 'checked' : '' ?>> <?= htmlspecialchars(cms_t('admin.pages.form.home', 'Ustaw jako strone glowna')) ?></label></div>
                         </div>
 
                         <div class="field">
-                            <label>Builder wygladu strony</label>
-                            <div class="tiny">Dodawaj bloki, przeciagnij aby zmienic kolejnosc, eksportuj/importuj JSON i dziel gotowe uklady.</div>
+                            <label><?= htmlspecialchars(cms_t('admin.pages.form.builder', 'Builder wygladu strony')) ?></label>
+                            <div class="tiny"><?= htmlspecialchars(cms_t('admin.pages.form.builder_help', 'Dodawaj bloki, przeciagnij aby zmienic kolejnosc, eksportuj/importuj JSON i dziel gotowe uklady.')) ?></div>
                         </div>
                         <div class="builder-toolbar">
                             <button class="btn ghost" type="button" data-builder2-add="hero">+ Hero</button>
@@ -165,43 +165,43 @@ foreach ($pages as $pageItem) {
                             <button class="btn ghost" type="button" data-builder2-add="container">+ Container</button>
                             <button class="btn ghost" type="button" data-builder2-add="gallery">+ Gallery</button>
                             <button class="btn ghost" type="button" data-builder2-add="plugin_slot">+ Plugin Slot</button>
-                            <button class="btn secondary" type="button" id="builderExportBtn">Eksport JSON</button>
-                            <label class="btn secondary" for="builderImportFile" style="display:inline-flex;align-items:center;cursor:pointer">Import JSON</label>
+                            <button class="btn secondary" type="button" id="builderExportBtn"><?= htmlspecialchars(cms_t('admin.pages.form.export_json', 'Eksport JSON')) ?></button>
+                            <label class="btn secondary" for="builderImportFile" style="display:inline-flex;align-items:center;cursor:pointer"><?= htmlspecialchars(cms_t('admin.pages.form.import_json', 'Import JSON')) ?></label>
                             <input id="builderImportFile" type="file" accept="application/json,.json" style="display:none">
                         </div>
-                        <div id="builderEmptyV2" class="builder-empty">Builder jest pusty. Dodaj pierwszy blok.</div>
+                        <div id="builderEmptyV2" class="builder-empty"><?= htmlspecialchars(cms_t('admin.pages.form.builder_empty', 'Builder jest pusty. Dodaj pierwszy blok.')) ?></div>
                         <div id="builderListV2" class="builder-list"></div>
 
-                        <div class="actions" style="margin-top:18px"><button class="btn" type="submit">Zapisz strone</button><a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>">Wyczysc formularz</a></div>
+                        <div class="actions" style="margin-top:18px"><button class="btn" type="submit"><?= htmlspecialchars(cms_t('admin.pages.form.save', 'Zapisz strone')) ?></button><a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>"><?= htmlspecialchars(cms_t('admin.pages.form.clear', 'Wyczysc formularz')) ?></a></div>
                     </form>
                 </section>
             </div>
 
             <div class="stack">
                 <section class="panel">
-                    <h2>Lista stron i podstron</h2>
+                    <h2><?= htmlspecialchars(cms_t('admin.pages.list.heading', 'Lista stron i podstron')) ?></h2>
                     <table>
-                        <thead><tr><th>Tytul</th><th>Status</th><th>Akcje</th></tr></thead>
+                        <thead><tr><th><?= htmlspecialchars(cms_t('admin.pages.list.title', 'Tytul')) ?></th><th><?= htmlspecialchars(cms_t('admin.pages.list.status', 'Status')) ?></th><th><?= htmlspecialchars(cms_t('admin.pages.list.actions', 'Akcje')) ?></th></tr></thead>
                         <tbody>
                         <?php foreach ($pages as $page): ?>
                             <tr>
                                 <td>
                                     <strong><?php if (!empty($page['parent_id'])): ?><span class="child-mark">↳</span><?php endif; ?><?= htmlspecialchars($page['title']) ?></strong><br>
                                     <div class="page-path"><?= htmlspecialchars(cms_url_with_lang(['page' => (string) $page['slug'], 'lang' => $editorLang])) ?></div>
-                                    <?php if (!empty($page['parent_id']) && isset($parentMap[(int) $page['parent_id']])): ?><small>Rodzic: <?= htmlspecialchars($parentMap[(int) $page['parent_id']]) ?></small><br><?php endif; ?>
-                                    <?php if ((int) $page['is_homepage'] === 1): ?> <span class="badge ok">Home</span><?php endif; ?>
-                                    <span class="badge">Sort: <?= (int) $page['sort_order'] ?></span>
+                                    <?php if (!empty($page['parent_id']) && isset($parentMap[(int) $page['parent_id']])): ?><small><?= htmlspecialchars(cms_t('admin.pages.list.parent', 'Rodzic:')) ?> <?= htmlspecialchars($parentMap[(int) $page['parent_id']]) ?></small><br><?php endif; ?>
+                                    <?php if ((int) $page['is_homepage'] === 1): ?> <span class="badge ok"><?= htmlspecialchars(cms_t('admin.pages.list.home', 'Home')) ?></span><?php endif; ?>
+                                    <span class="badge"><?= htmlspecialchars(cms_t('admin.pages.list.sort', 'Sort:')) ?> <?= (int) $page['sort_order'] ?></span>
                                 </td>
                                 <td><span class="badge <?= $page['status'] === 'published' ? 'ok' : 'off' ?>"><?= htmlspecialchars($page['status']) ?></span></td>
                                 <td>
                                     <div class="table-actions">
-                                        <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/pages.php?edit=' . (int) $page['id'])) ?>">Edytuj</a>
-                                        <a class="btn secondary" target="_blank" href="<?= htmlspecialchars(cms_url_with_lang(['page' => (string) $page['slug'], 'lang' => $editorLang])) ?>">Podglad</a>
-                                        <form method="post" onsubmit="return confirm('Usunac te strone?');">
+                                        <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/pages.php?edit=' . (int) $page['id'])) ?>"><?= htmlspecialchars(cms_t('admin.pages.list.edit', 'Edytuj')) ?></a>
+                                        <a class="btn secondary" target="_blank" href="<?= htmlspecialchars(cms_url_with_lang(['page' => (string) $page['slug'], 'lang' => $editorLang])) ?>"><?= htmlspecialchars(cms_t('admin.pages.list.preview', 'Podglad')) ?></a>
+                                        <form method="post" onsubmit="return confirm('<?= htmlspecialchars(cms_t('admin.pages.confirm_delete', 'Usunac te strone?')) ?>');">
                                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
                                             <input type="hidden" name="action" value="delete_page">
                                             <input type="hidden" name="page_id" value="<?= (int) $page['id'] ?>">
-                                            <button class="btn danger" type="submit">Usun</button>
+                                            <button class="btn danger" type="submit"><?= htmlspecialchars(cms_t('admin.pages.list.delete', 'Usun')) ?></button>
                                         </form>
                                     </div>
                                 </td>
