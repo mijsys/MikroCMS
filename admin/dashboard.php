@@ -37,6 +37,28 @@ $enabledPlugins = (int) $db->query('SELECT COUNT(*) FROM cms_plugins WHERE enabl
 $subpageCount = (int) $db->query('SELECT COUNT(*) FROM cms_pages WHERE parent_id IS NOT NULL')->fetchColumn();
 
 $coreUpdate = cms_core_update_info();
+$coreManifest = is_array($coreUpdate['manifest'] ?? null) ? (array) $coreUpdate['manifest'] : [];
+$coreChangeList = [];
+if (isset($coreManifest['changes']) && is_array($coreManifest['changes'])) {
+    foreach ($coreManifest['changes'] as $entry) {
+        $line = trim((string) $entry);
+        if ($line !== '') {
+            $coreChangeList[] = $line;
+        }
+    }
+}
+if ($coreChangeList === []) {
+    $notesRaw = trim((string) ($coreManifest['notes'] ?? ''));
+    if ($notesRaw !== '') {
+        $split = preg_split('/\r\n|\r|\n|\s*;\s*/', $notesRaw) ?: [];
+        foreach ($split as $line) {
+            $clean = trim((string) $line, " \t\n\r\0\x0B-");
+            if ($clean !== '') {
+                $coreChangeList[] = $clean;
+            }
+        }
+    }
+}
 $plugins = cms_all_plugins();
 $storeIndex = cms_plugin_store_index();
 $pluginUpdates = cms_plugin_updates_map($plugins, $storeIndex);
@@ -115,6 +137,14 @@ $coreDownloadUrl = cms_core_update_download_url($coreUpdate);
                             <span class="badge off"><?= htmlspecialchars(cms_t('admin.dashboard.core.no_manifest', 'Brak polaczenia z manifestem')) ?></span>
                         <?php endif; ?>
                     </div>
+                    <?php if ($coreChangeList !== []): ?>
+                        <div class="muted" style="font-size:12px;margin-top:10px"><?= htmlspecialchars(cms_t('admin.dashboard.core.changes', 'Lista zmian:')) ?></div>
+                        <ul style="margin:8px 0 0 18px;padding:0;display:grid;gap:4px">
+                            <?php foreach ($coreChangeList as $changeLine): ?>
+                                <li style="font-size:12px;color:#d4e8f8"><?= htmlspecialchars($changeLine) ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
                 </div>
 
                 <div class="card" style="padding:14px">

@@ -23,16 +23,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $action = $_POST['action'] ?? '';
+    $redirectEditId = null;
     try {
         switch ($action) {
             case 'save_page':
                 $id = isset($_POST['page_id']) && $_POST['page_id'] !== '' ? (int) $_POST['page_id'] : null;
                 $savedId = cms_save_page($_POST, $id);
+                $redirectEditId = $savedId;
                 $editLangPost = cms_normalize_lang_code((string) ($_POST['edit_lang'] ?? $defaultLang), $defaultLang);
                 if ($editLangPost !== $defaultLang) {
                     cms_save_page_translation($savedId, $editLangPost, $_POST);
                 }
                 cms_flash('success', $id ? cms_t('admin.pages.flash.updated', 'Strona zostala zaktualizowana.') : cms_t('admin.pages.flash.created', 'Strona zostala dodana.'));
+                break;
+            case 'restore_revision':
+                $revisionId = (int) ($_POST['revision_id'] ?? 0);
+                $restoredPageId = cms_restore_page_revision($revisionId, isset($user['id']) ? (int) $user['id'] : null);
+                $redirectEditId = $restoredPageId;
+                cms_flash('success', cms_t('admin.pages.flash.revision_restored', 'Przywrocono wybrana wersje strony.'));
                 break;
             case 'delete_page':
                 cms_delete_page((int) ($_POST['page_id'] ?? 0));
@@ -43,7 +51,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         cms_flash('error', $e->getMessage());
     }
 
-    cms_redirect(cms_url('admin/pages.php?lang=' . urlencode($editorLang)));
+    $redirectUrl = cms_url('admin/pages.php?lang=' . urlencode($editorLang));
+    if ($redirectEditId !== null && $redirectEditId > 0) {
+        $redirectUrl .= '&edit=' . (int) $redirectEditId;
+    }
+    cms_redirect($redirectUrl);
 }
 
 $flash = cms_pull_flash();
@@ -66,6 +78,7 @@ if ($editPage && $editorLang !== $defaultLang) {
 }
 
 $builderBlocks = cms_normalize_builder_blocks($editPage['builder_data'] ?? '[]');
+$pageRevisions = $editPage ? cms_page_revisions((int) ($editPage['id'] ?? 0), 20) : [];
 $parentMap = [];
 foreach ($pages as $pageItem) {
     $parentMap[(int) $pageItem['id']] = $pageItem['title'];
@@ -206,6 +219,32 @@ foreach ($pages as $pageItem) {
             </div>
 
             <div class="stack">
+                <?php if ($editPage): ?>
+                <section class="panel">
+                    <h2><?= htmlspecialchars(cms_t('admin.pages.revisions.heading', 'Historia zmian strony')) ?></h2>
+                    <?php if ($pageRevisions !== []): ?>
+                        <div class="placement-list">
+                            <?php foreach ($pageRevisions as $revision): ?>
+                                <div class="placement-item" style="grid-template-columns:1fr auto">
+                                    <div>
+                                        <strong>#<?= (int) ($revision['id'] ?? 0) ?></strong>
+                                        <div class="tiny"><?= htmlspecialchars((string) ($revision['created_at'] ?? '')) ?><?php if (!empty($revision['created_by_username'])): ?> · <?= htmlspecialchars((string) $revision['created_by_username']) ?><?php endif; ?></div>
+                                    </div>
+                                    <form method="post" onsubmit="return confirm('<?= htmlspecialchars(cms_t('admin.pages.revisions.confirm_restore', 'Przywrocic te wersje strony?')) ?>');">
+                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
+                                        <input type="hidden" name="action" value="restore_revision">
+                                        <input type="hidden" name="revision_id" value="<?= (int) ($revision['id'] ?? 0) ?>">
+                                        <button class="btn secondary" type="submit"><?= htmlspecialchars(cms_t('admin.pages.revisions.restore', 'Przywroc')) ?></button>
+                                    </form>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="builder-empty"><?= htmlspecialchars(cms_t('admin.pages.revisions.empty', 'Brak zapisanej historii dla tej strony.')) ?></div>
+                    <?php endif; ?>
+                </section>
+                <?php endif; ?>
+
                 <section class="panel">
                     <h2><?= htmlspecialchars(cms_t('admin.pages.list.heading', 'Lista stron i podstron')) ?></h2>
                     <table>

@@ -405,6 +405,104 @@ function cms_page_by_id(int $id): ?array
     return $page ? cms_apply_page_translation($page) : null;
 }
 
+function cms_save_page_revision_snapshot(int $pageId, ?int $createdBy = null): void
+{
+    if ($pageId <= 0) {
+        return;
+    }
+
+    $db = cms_db();
+    $stmt = $db->prepare('SELECT * FROM cms_pages WHERE id = ? LIMIT 1');
+    $stmt->execute([$pageId]);
+    $page = $stmt->fetch();
+    if (!is_array($page)) {
+        return;
+    }
+
+    $insert = $db->prepare('INSERT INTO cms_page_revisions (page_id, title, slug, excerpt, content, meta_title, meta_description, builder_data, status, is_homepage, sort_order, template, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $insert->execute([
+        $pageId,
+        (string) ($page['title'] ?? ''),
+        (string) ($page['slug'] ?? ''),
+        (string) ($page['excerpt'] ?? ''),
+        (string) ($page['content'] ?? ''),
+        (string) ($page['meta_title'] ?? ''),
+        (string) ($page['meta_description'] ?? ''),
+        (string) ($page['builder_data'] ?? '[]'),
+        (string) ($page['status'] ?? 'draft'),
+        (int) ($page['is_homepage'] ?? 0),
+        (int) ($page['sort_order'] ?? 0),
+        (string) ($page['template'] ?? 'default'),
+        $createdBy,
+    ]);
+}
+
+function cms_page_revisions(int $pageId, int $limit = 20): array
+{
+    if ($pageId <= 0) {
+        return [];
+    }
+    $limit = max(1, min(100, $limit));
+
+    $sql = 'SELECT r.*, u.username AS created_by_username\n            FROM cms_page_revisions r\n            LEFT JOIN cms_users u ON u.id = r.created_by\n            WHERE r.page_id = ?\n            ORDER BY r.id DESC\n            LIMIT ' . (int) $limit;
+    $stmt = cms_db()->prepare($sql);
+    $stmt->execute([$pageId]);
+    return $stmt->fetchAll() ?: [];
+}
+
+function cms_restore_page_revision(int $revisionId, ?int $actorId = null): int
+{
+    if ($revisionId <= 0) {
+        throw new InvalidArgumentException('Nieprawidlowe ID rewizji.');
+    }
+
+    $db = cms_db();
+    $stmt = $db->prepare('SELECT * FROM cms_page_revisions WHERE id = ? LIMIT 1');
+    $stmt->execute([$revisionId]);
+    $revision = $stmt->fetch();
+    if (!is_array($revision)) {
+        throw new RuntimeException('Nie znaleziono wskazanej rewizji strony.');
+    }
+
+    $pageId = (int) ($revision['page_id'] ?? 0);
+    if ($pageId <= 0) {
+        throw new RuntimeException('Rewizja nie zawiera poprawnego ID strony.');
+    }
+
+    $db->beginTransaction();
+    try {
+        cms_save_page_revision_snapshot($pageId, $actorId);
+
+        if ((int) ($revision['is_homepage'] ?? 0) === 1) {
+            $db->exec('UPDATE cms_pages SET is_homepage = 0');
+        }
+
+        $update = $db->prepare('UPDATE cms_pages SET title = ?, slug = ?, excerpt = ?, content = ?, meta_title = ?, meta_description = ?, builder_data = ?, status = ?, is_homepage = ?, sort_order = ?, template = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
+        $update->execute([
+            (string) ($revision['title'] ?? ''),
+            (string) ($revision['slug'] ?? ''),
+            (string) ($revision['excerpt'] ?? ''),
+            (string) ($revision['content'] ?? ''),
+            (string) ($revision['meta_title'] ?? ''),
+            (string) ($revision['meta_description'] ?? ''),
+            (string) ($revision['builder_data'] ?? '[]'),
+            (string) ($revision['status'] ?? 'draft'),
+            (int) ($revision['is_homepage'] ?? 0),
+            (int) ($revision['sort_order'] ?? 0),
+            (string) ($revision['template'] ?? 'default'),
+            $pageId,
+        ]);
+
+        $db->commit();
+        return $pageId;
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        throw $e;
+    }
+}
+
 function cms_decode_builder_data(?string $builderData): array
 {
     if (!is_string($builderData) || trim($builderData) === '') {
@@ -751,6 +849,7 @@ function cms_save_page(array $data, ?int $id = null): int
     }
 
     if ($id !== null) {
+        cms_save_page_revision_snapshot($id, null);
         $stmt = $db->prepare('UPDATE cms_pages SET parent_id = ?, title = ?, slug = ?, excerpt = ?, content = ?, meta_title = ?, meta_description = ?, builder_data = ?, status = ?, is_homepage = ?, sort_order = ?, template = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
         $stmt->execute([$parentId, $title, $slug, $excerpt, $content, $metaTitle, $metaDescription, $builderData, $status, $isHomepage, $sortOrder, $template, $id]);
         return $id;

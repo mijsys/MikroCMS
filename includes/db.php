@@ -196,6 +196,25 @@ function cms_init_db(PDO $db): void
             UNIQUE KEY unique_page_lang (page_id, lang)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $db->exec("CREATE TABLE IF NOT EXISTS cms_page_revisions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            page_id INT NOT NULL,
+            title VARCHAR(191) NOT NULL,
+            slug VARCHAR(191) NOT NULL,
+            excerpt TEXT NOT NULL,
+            content LONGTEXT NOT NULL,
+            meta_title VARCHAR(191) NOT NULL DEFAULT '',
+            meta_description TEXT NOT NULL,
+            builder_data LONGTEXT NOT NULL,
+            status VARCHAR(30) NOT NULL DEFAULT 'draft',
+            is_homepage TINYINT(1) NOT NULL DEFAULT 0,
+            sort_order INT NOT NULL DEFAULT 0,
+            template VARCHAR(80) NOT NULL DEFAULT 'default',
+            created_by INT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_page_revisions_page (page_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $db->exec("CREATE TABLE IF NOT EXISTS cms_i18n_strings (
             id INT AUTO_INCREMENT PRIMARY KEY,
             lang VARCHAR(12) NOT NULL,
@@ -297,6 +316,26 @@ function cms_init_db(PDO $db): void
 
         $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_page_translations_page_lang ON cms_page_translations(page_id, lang)");
 
+        $db->exec("CREATE TABLE IF NOT EXISTS cms_page_revisions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            page_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            slug TEXT NOT NULL,
+            excerpt TEXT NOT NULL DEFAULT '',
+            content TEXT NOT NULL DEFAULT '',
+            meta_title TEXT NOT NULL DEFAULT '',
+            meta_description TEXT NOT NULL DEFAULT '',
+            builder_data TEXT NOT NULL DEFAULT '[]',
+            status TEXT NOT NULL DEFAULT 'draft',
+            is_homepage INTEGER NOT NULL DEFAULT 0,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            template TEXT NOT NULL DEFAULT 'default',
+            created_by INTEGER DEFAULT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        $db->exec("CREATE INDEX IF NOT EXISTS idx_page_revisions_page ON cms_page_revisions(page_id)");
+
         $db->exec("CREATE TABLE IF NOT EXISTS cms_i18n_strings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             lang TEXT NOT NULL,
@@ -337,7 +376,7 @@ function cms_init_db(PDO $db): void
         ['site_name', 'My CMS'],
         ['site_tagline', 'Nowy system CMS oparty o portfolio'],
         ['theme', 'default'],
-        ['cms_core_version', '1.1.2'],
+        ['cms_core_version', '1.1.3'],
         ['site_mode', 'multipage'],
         ['theme_variant', 'multipage'],
         ['site_default_language', 'pl'],
