@@ -265,7 +265,7 @@ function cms_init_db(PDO $db): void
         ['site_name', 'My CMS'],
         ['site_tagline', 'Nowy system CMS oparty o portfolio'],
         ['theme', 'default'],
-        ['cms_core_version', '1.0.0'],
+        ['cms_core_version', '1.0.1'],
         ['site_mode', 'multipage'],
         ['theme_variant', 'multipage'],
         ['cms_update_manifest_url', CMS_DEFAULT_UPDATE_MANIFEST_URL],

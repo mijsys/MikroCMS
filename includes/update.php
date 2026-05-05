@@ -86,7 +86,7 @@ function cms_normalize_version_string(string $version, string $fallback = '0.0.0
 
 function cms_core_version(): string
 {
-    return cms_normalize_version_string(cms_get_setting('cms_core_version', '1.0.0'), '1.0.0');
+    return cms_normalize_version_string(cms_get_setting('cms_core_version', '1.0.1'), '1.0.1');
 }
 
 function cms_core_update_info(): array

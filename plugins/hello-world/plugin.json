@@ -1,7 +1,7 @@
 {
   "slug": "hello-world",
   "name": "Hello World Plugin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Przykladowy plugin pokazujacy jak dziala system hookow w CMS.",
   "entry": "bootstrap.php",
   "homepage": "https://github.com/mijsys/portfolio",
