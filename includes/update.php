@@ -339,7 +339,19 @@ function cms_install_or_update_core_from_manifest(): array
         $copyEntries[] = $entry;
     }
 
+    // Chroni przed zastosowaniem niepelnej paczki (np. uszkodzony ZIP lub zly katalog zrodla).
+    $requiredEntries = ['index.php', 'includes', 'admin'];
+    foreach ($requiredEntries as $requiredEntry) {
+        if (!in_array($requiredEntry, $copyEntries, true)) {
+            cms_core_delete_path($extractDir);
+            cms_core_delete_path($backupDir);
+            throw new RuntimeException('Paczka aktualizacji CMS jest niepelna i zostala odrzucona.');
+        }
+    }
+
     $existingBefore = [];
+    $backedUpEntries = [];
+    $replacedEntries = [];
 
     try {
         foreach ($copyEntries as $entry) {
@@ -349,6 +361,7 @@ function cms_install_or_update_core_from_manifest(): array
 
             if ($existingBefore[$entry]) {
                 cms_core_copy_path($targetPath, $backupPath);
+                $backedUpEntries[$entry] = true;
             }
         }
 
@@ -359,6 +372,7 @@ function cms_install_or_update_core_from_manifest(): array
                 cms_core_delete_path($targetPath);
             }
             cms_core_copy_path($sourcePath, $targetPath);
+            $replacedEntries[] = $entry;
         }
 
         $remoteVersion = (string) ($coreUpdate['remote_version'] ?? CMS_CODE_VERSION);
@@ -370,12 +384,12 @@ function cms_install_or_update_core_from_manifest(): array
             'download_url' => $downloadUrl,
         ];
     } catch (Throwable $e) {
-        foreach ($copyEntries as $entry) {
+        foreach ($replacedEntries as $entry) {
             $targetPath = $targetRoot . '/' . $entry;
             $backupPath = $backupDir . '/' . $entry;
             cms_core_delete_path($targetPath);
 
-            if (!empty($existingBefore[$entry]) && file_exists($backupPath)) {
+            if (!empty($backedUpEntries[$entry]) && file_exists($backupPath)) {
                 cms_core_copy_path($backupPath, $targetPath);
             }
         }
