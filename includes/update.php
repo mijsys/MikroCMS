@@ -333,8 +333,9 @@ function cms_install_or_update_core_from_manifest(): array
     }
 
     $sourceRoot = cms_core_find_project_root_in_extracted($extractDir);
-    // plugins/ i themes/ maja wlasny mechanizm aktualizacji — nie dotykamy ich przy core update.
-    $protected = ['.git', 'storage', 'uploads', 'data', 'plugins', 'themes', 'releases'];
+    // Aktualizacja core obejmuje wszystkie pliki projektu z paczki,
+    // z wyjatkiem katalogow runtime i metadanych repozytorium.
+    $protected = ['.git', 'storage', 'uploads', 'data'];
 
     $entries = scandir($sourceRoot);
     if (!is_array($entries)) {
