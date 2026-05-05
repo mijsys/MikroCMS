@@ -160,21 +160,34 @@ foreach ($pages as $pageItem) {
                         <div class="field">
                             <label><?= htmlspecialchars(cms_t('admin.pages.form.builder', 'Builder wygladu strony')) ?></label>
                             <div class="tiny"><?= htmlspecialchars(cms_t('admin.pages.form.builder_help', 'Dodawaj bloki, przeciagnij aby zmienic kolejnosc, eksportuj/importuj JSON i dziel gotowe uklady.')) ?></div>
+                            <div class="tiny" style="margin-top:6px"><?= htmlspecialchars(cms_t('admin.pages.form.builder_help_easy', 'Tryb wizualny: otworz okno kreatora i ukladaj sekcje metoda drag and drop bez znajomosci kodu.')) ?></div>
                         </div>
-                        <div class="builder-toolbar">
-                            <button class="btn ghost" type="button" data-builder2-add="hero">+ Hero</button>
-                            <button class="btn ghost" type="button" data-builder2-add="text">+ Text</button>
-                            <button class="btn ghost" type="button" data-builder2-add="image">+ Image</button>
-                            <button class="btn ghost" type="button" data-builder2-add="container">+ Container</button>
-                            <button class="btn ghost" type="button" data-builder2-add="gallery">+ Gallery</button>
-                            <button class="btn ghost" type="button" data-builder2-add="plugin_slot">+ Plugin Slot</button>
-                            <button class="btn secondary" type="button" id="builderSectionsFocusBtn"><?= htmlspecialchars(cms_t('admin.pages.form.show_sections', 'Pokaz sekcje strony')) ?></button>
-                            <button class="btn secondary" type="button" id="builderExportBtn"><?= htmlspecialchars(cms_t('admin.pages.form.export_json', 'Eksport JSON')) ?></button>
-                            <label class="btn secondary" for="builderImportFile" style="display:inline-flex;align-items:center;cursor:pointer"><?= htmlspecialchars(cms_t('admin.pages.form.import_json', 'Import JSON')) ?></label>
-                            <input id="builderImportFile" type="file" accept="application/json,.json" style="display:none">
+                        <button class="btn" type="button" id="openBuilderWindowBtn" style="margin-bottom:12px"><?= htmlspecialchars(cms_t('admin.pages.form.open_builder_window', 'Otworz okno kreatora strony')) ?></button>
+
+                        <div id="builderWindowBackdrop" class="builder-window-backdrop"></div>
+                        <div id="builderWindowShell" class="builder-window-shell" role="dialog" aria-modal="true" aria-label="<?= htmlspecialchars(cms_t('admin.pages.form.builder', 'Builder wygladu strony')) ?>">
+                            <div class="builder-window-head">
+                                <div>
+                                    <strong><?= htmlspecialchars(cms_t('admin.pages.form.builder_window_title', 'Kreator strony - drag and drop')) ?></strong>
+                                    <div class="tiny"><?= htmlspecialchars(cms_t('admin.pages.form.builder_window_subtitle', 'Dodawaj, przesuwaj i dopasowuj sekcje w jednym oknie.')) ?></div>
+                                </div>
+                                <button class="btn danger" type="button" id="closeBuilderWindowBtn"><?= htmlspecialchars(cms_t('admin.pages.form.close_builder_window', 'Zamknij okno')) ?></button>
+                            </div>
+                            <div class="builder-toolbar">
+                                <button class="btn ghost" type="button" data-builder2-add="hero">+ Hero</button>
+                                <button class="btn ghost" type="button" data-builder2-add="text">+ Text</button>
+                                <button class="btn ghost" type="button" data-builder2-add="image">+ Image</button>
+                                <button class="btn ghost" type="button" data-builder2-add="container">+ Container</button>
+                                <button class="btn ghost" type="button" data-builder2-add="gallery">+ Gallery</button>
+                                <button class="btn ghost" type="button" data-builder2-add="plugin_slot">+ Plugin Slot</button>
+                                <button class="btn secondary" type="button" id="builderSectionsFocusBtn"><?= htmlspecialchars(cms_t('admin.pages.form.show_sections', 'Pokaz sekcje strony')) ?></button>
+                                <button class="btn secondary" type="button" id="builderExportBtn"><?= htmlspecialchars(cms_t('admin.pages.form.export_json', 'Eksport JSON')) ?></button>
+                                <label class="btn secondary" for="builderImportFile" style="display:inline-flex;align-items:center;cursor:pointer"><?= htmlspecialchars(cms_t('admin.pages.form.import_json', 'Import JSON')) ?></label>
+                                <input id="builderImportFile" type="file" accept="application/json,.json" style="display:none">
+                            </div>
+                            <div id="builderEmptyV2" class="builder-empty"><?= htmlspecialchars(cms_t('admin.pages.form.builder_empty', 'Builder jest pusty. Dodaj pierwszy blok.')) ?></div>
+                            <div id="builderListV2" class="builder-list"></div>
                         </div>
-                        <div id="builderEmptyV2" class="builder-empty"><?= htmlspecialchars(cms_t('admin.pages.form.builder_empty', 'Builder jest pusty. Dodaj pierwszy blok.')) ?></div>
-                        <div id="builderListV2" class="builder-list"></div>
 
                         <div class="actions" style="margin-top:18px;align-items:center;flex-wrap:wrap">
                             <button class="btn" type="submit"><?= htmlspecialchars(cms_t('admin.pages.form.save', 'Zapisz strone')) ?></button>

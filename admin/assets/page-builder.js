@@ -491,6 +491,44 @@
         });
     }
 
+    var openBuilderWindowBtn = document.getElementById('openBuilderWindowBtn');
+    var closeBuilderWindowBtn = document.getElementById('closeBuilderWindowBtn');
+    var builderWindowShell = document.getElementById('builderWindowShell');
+    var builderWindowBackdrop = document.getElementById('builderWindowBackdrop');
+
+    function setBuilderWindow(open) {
+        if (!builderWindowShell || !builderWindowBackdrop) {
+            return;
+        }
+        if (open) {
+            builderWindowShell.classList.add('open');
+            builderWindowBackdrop.classList.add('open');
+            document.body.classList.add('builder-window-open');
+        } else {
+            builderWindowShell.classList.remove('open');
+            builderWindowBackdrop.classList.remove('open');
+            document.body.classList.remove('builder-window-open');
+        }
+    }
+
+    if (openBuilderWindowBtn) {
+        openBuilderWindowBtn.addEventListener('click', function () {
+            setBuilderWindow(true);
+        });
+    }
+
+    if (closeBuilderWindowBtn) {
+        closeBuilderWindowBtn.addEventListener('click', function () {
+            setBuilderWindow(false);
+        });
+    }
+
+    if (builderWindowBackdrop) {
+        builderWindowBackdrop.addEventListener('click', function () {
+            setBuilderWindow(false);
+        });
+    }
+
     var importInput = document.getElementById('builderImportFile');
     if (importInput) {
         importInput.addEventListener('change', function () {
@@ -659,6 +697,9 @@
     if (previewClose) { previewClose.addEventListener('click', closePreview); }
 
     document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && builderWindowShell && builderWindowShell.classList.contains('open')) {
+            setBuilderWindow(false);
+        }
         if (e.key === 'Escape' && previewOverlay && previewOverlay.classList.contains('open')) {
             closePreview();
         }

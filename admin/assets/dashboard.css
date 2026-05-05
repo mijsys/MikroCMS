@@ -902,3 +902,49 @@ td small {
 	background: #ffffff;
 	display: block;
 }
+
+.builder-window-backdrop {
+	display: none;
+	position: fixed;
+	inset: 0;
+	z-index: 190;
+	background: rgba(2, 10, 16, 0.72);
+	backdrop-filter: blur(3px);
+}
+
+.builder-window-backdrop.open {
+	display: block;
+}
+
+.builder-window-shell {
+	display: none;
+	position: fixed;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 200;
+	width: min(1320px, calc(100vw - 28px));
+	height: min(860px, calc(100vh - 28px));
+	padding: 18px;
+	overflow: auto;
+	border: 1px solid rgba(123, 176, 213, 0.3);
+	border-radius: 16px;
+	background: linear-gradient(175deg, rgba(14, 37, 57, 0.98), rgba(10, 28, 43, 0.98));
+	box-shadow: 0 36px 100px rgba(0, 0, 0, 0.55);
+}
+
+.builder-window-shell.open {
+	display: block;
+}
+
+.builder-window-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 14px;
+	margin-bottom: 12px;
+}
+
+body.builder-window-open {
+	overflow: hidden;
+}
