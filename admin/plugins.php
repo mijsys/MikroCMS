@@ -141,7 +141,7 @@ $facebookLimit = cms_get_setting('facebook_plugin_limit', '5');
         <div style="margin-top:24px" class="muted"><?= htmlspecialchars(cms_t('admin.nav.logged_as', 'Zalogowany:')) ?> <?= htmlspecialchars($user['username'] ?? 'admin') ?></div>
     </aside>
     <main class="main">
-        <div class="topbar"><div><h1 style="margin:0 0 6px"><?= htmlspecialchars(cms_t('admin.plugins.heading', 'Pluginy')) ?></h1><div class="muted"><?= htmlspecialchars(cms_t('admin.plugins.subheading', 'Instalacja, aktualizacje i umieszczanie pluginow na stronach.')) ?></div></div></div>
+        <div class="topbar"><div style="display:flex;align-items:flex-start;gap:12px"><button id="sidebarToggleBtn" class="btn ghost" title="Ukryj panel boczny" style="padding:8px 13px;font-size:18px;line-height:1;flex-shrink:0;margin-top:3px">&#8249;</button><div><h1 style="margin:0 0 6px"><?= htmlspecialchars(cms_t('admin.plugins.heading', 'Pluginy')) ?></h1><div class="muted"><?= htmlspecialchars(cms_t('admin.plugins.subheading', 'Instalacja, aktualizacje i umieszczanie pluginow na stronach.')) ?></div></div></div></div>
 
         <?php if ($flash): ?><div class="flash <?= htmlspecialchars($flash['type']) ?>"><?= htmlspecialchars($flash['message']) ?></div><?php endif; ?>
 

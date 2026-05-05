@@ -75,9 +75,12 @@ $coreDownloadUrl = cms_core_update_download_url($coreUpdate);
 
     <main class="main">
         <div class="topbar">
-            <div>
-                <h1 style="margin:0 0 6px"><?= htmlspecialchars(cms_t('admin.dashboard.heading', 'Dashboard CMS')) ?></h1>
-                <div class="muted"><?= htmlspecialchars(cms_t('admin.dashboard.subheading', 'Wszystkie funkcje sa dostepne jako osobne podstrony panelu.')) ?></div>
+            <div style="display:flex;align-items:flex-start;gap:12px">
+                <button id="sidebarToggleBtn" class="btn ghost" title="Ukryj panel boczny" style="padding:8px 13px;font-size:18px;line-height:1;flex-shrink:0;margin-top:3px">&#8249;</button>
+                <div>
+                    <h1 style="margin:0 0 6px"><?= htmlspecialchars(cms_t('admin.dashboard.heading', 'Dashboard CMS')) ?></h1>
+                    <div class="muted"><?= htmlspecialchars(cms_t('admin.dashboard.subheading', 'Wszystkie funkcje sa dostepne jako osobne podstrony panelu.')) ?></div>
+                </div>
             </div>
         </div>
 
