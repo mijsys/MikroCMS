@@ -51,8 +51,15 @@
         item.innerHTML = '' +
             '<div class="builder-head">' +
                 '<div><span class="builder-handle">Przeciagnij</span> <strong>' + esc(String(block.type).toUpperCase()) + '</strong></div>' +
-                '<button type="button" class="btn danger" data-remove-block>Usun blok</button>' +
+                    '<button type="button" class="btn danger" data-remove-block>Usun sekcje</button>' +
             '</div>' +
+                '<div class="builder-section-preview" data-section-preview style="height:' + esc(block.min_height) + 'px">' +
+                    '<div class="builder-section-overlay">' +
+                        '<strong data-preview-title>' + esc(block.title || 'Sekcja bez tytulu') + '</strong>' +
+                        '<span data-preview-type>' + esc(String(block.type).toUpperCase()) + '</span>' +
+                    '</div>' +
+                    '<div class="builder-resize-handle" data-resize-handle title="Przeciagnij, aby zmienic wysokosc sekcji"></div>' +
+                '</div>' +
             '<div class="builder-fields">' +
                 '<div><label>Typ bloku</label><select data-field="type">' +
                     '<option value="hero">Hero</option>' +
@@ -100,9 +107,168 @@
         return item;
     }
 
+    function parseContainerItems(raw) {
+        var parsed;
+        try {
+            parsed = JSON.parse(String(raw || '[]'));
+        } catch (e) {
+            parsed = [];
+        }
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+        return parsed.filter(function (entry) { return entry && typeof entry === 'object'; }).map(function (entry) {
+            return {
+                title: String(entry.title || ''),
+                text: String(entry.text || ''),
+                image: String(entry.image || ''),
+                button_text: String(entry.button_text || ''),
+                button_url: String(entry.button_url || '')
+            };
+        });
+    }
+
+    function containerItemCard(data) {
+        var card = document.createElement('div');
+        card.className = 'container-editor-item';
+        card.draggable = true;
+        card.innerHTML = '' +
+            '<div class="container-editor-head">' +
+                '<div><span class="container-editor-handle">Przeciagnij</span> <strong>Element kontenera</strong></div>' +
+                '<button type="button" class="btn danger" data-container-remove-item>Usun</button>' +
+            '</div>' +
+            '<div class="container-editor-fields">' +
+                '<div><label>Tytul</label><input type="text" data-ci-field="title" value="' + esc(data.title) + '"></div>' +
+                '<div><label>Obraz (URL)</label><input type="url" data-ci-field="image" value="' + esc(data.image) + '" placeholder="https://..."></div>' +
+                '<div class="full"><label>Opis</label><textarea data-ci-field="text">' + esc(data.text) + '</textarea></div>' +
+                '<div><label>Tekst przycisku</label><input type="text" data-ci-field="button_text" value="' + esc(data.button_text) + '"></div>' +
+                '<div><label>URL przycisku</label><input type="url" data-ci-field="button_url" value="' + esc(data.button_url) + '" placeholder="https://..."></div>' +
+            '</div>';
+        return card;
+    }
+
+    function refreshContainerEmpty(item) {
+        var editor = item.querySelector('[data-container-editor]');
+        if (!editor) {
+            return;
+        }
+        var empty = editor.querySelector('[data-container-editor-empty]');
+        var listEl = editor.querySelector('[data-container-editor-list]');
+        if (!empty || !listEl) {
+            return;
+        }
+        empty.style.display = listEl.querySelector('.container-editor-item') ? 'none' : 'block';
+    }
+
+    function syncContainerRaw(item) {
+        var editor = item.querySelector('[data-container-editor]');
+        var rawField = item.querySelector('[data-container-raw]');
+        if (!editor || !rawField) {
+            return;
+        }
+        var listEl = editor.querySelector('[data-container-editor-list]');
+        if (!listEl) {
+            return;
+        }
+
+        var out = [];
+        listEl.querySelectorAll('.container-editor-item').forEach(function (card) {
+            var one = {};
+            card.querySelectorAll('[data-ci-field]').forEach(function (field) {
+                one[field.getAttribute('data-ci-field')] = field.value;
+            });
+            out.push(one);
+        });
+        rawField.value = JSON.stringify(out);
+    }
+
+    function initContainerEditor(item) {
+        var editor = item.querySelector('[data-container-editor]');
+        var rawField = item.querySelector('[data-container-raw]');
+        if (!editor || !rawField || editor.getAttribute('data-init') === '1') {
+            return;
+        }
+        editor.setAttribute('data-init', '1');
+
+        var addBtn = editor.querySelector('[data-container-add-item]');
+        var listEl = editor.querySelector('[data-container-editor-list]');
+        if (!addBtn || !listEl) {
+            return;
+        }
+
+        function bindCard(card) {
+            card.querySelectorAll('[data-ci-field]').forEach(function (field) {
+                field.addEventListener('input', function () {
+                    syncContainerRaw(item);
+                    sync();
+                });
+                field.addEventListener('change', function () {
+                    syncContainerRaw(item);
+                    sync();
+                });
+            });
+
+            var removeBtn = card.querySelector('[data-container-remove-item]');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function () {
+                    card.remove();
+                    refreshContainerEmpty(item);
+                    syncContainerRaw(item);
+                    sync();
+                });
+            }
+
+            card.addEventListener('dragstart', function () {
+                card.classList.add('dragging');
+            });
+
+            card.addEventListener('dragend', function () {
+                card.classList.remove('dragging');
+                syncContainerRaw(item);
+                sync();
+            });
+        }
+
+        listEl.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            var dragging = listEl.querySelector('.container-editor-item.dragging');
+            if (!dragging) {
+                return;
+            }
+            var after = Array.prototype.slice.call(listEl.querySelectorAll('.container-editor-item:not(.dragging)')).find(function (el) {
+                var rect = el.getBoundingClientRect();
+                return e.clientY < rect.top + rect.height / 2;
+            });
+            if (after) {
+                listEl.insertBefore(dragging, after);
+            } else {
+                listEl.appendChild(dragging);
+            }
+        });
+
+        addBtn.addEventListener('click', function () {
+            var card = containerItemCard({ title: '', text: '', image: '', button_text: '', button_url: '' });
+            listEl.appendChild(card);
+            bindCard(card);
+            refreshContainerEmpty(item);
+            syncContainerRaw(item);
+            sync();
+        });
+
+        parseContainerItems(rawField.value).forEach(function (entry) {
+            var card = containerItemCard(entry);
+            listEl.appendChild(card);
+            bindCard(card);
+        });
+
+        refreshContainerEmpty(item);
+        syncContainerRaw(item);
+    }
+
     function sync() {
         var payload = [];
         list.querySelectorAll('.builder-item').forEach(function (item) {
+            syncContainerRaw(item);
             var data = {};
             item.querySelectorAll('[data-field]').forEach(function (field) {
                 data[field.getAttribute('data-field')] = field.value;
@@ -114,9 +280,48 @@
     }
 
     function bindItem(item) {
+        initContainerEditor(item);
+
+        var minHeightField = item.querySelector('[data-field="min_height"]');
+        var preview = item.querySelector('[data-section-preview]');
+        var titleField = item.querySelector('[data-field="title"]');
+        var typeField = item.querySelector('[data-field="type"]');
+        var colorField = item.querySelector('[data-field="background_color"]');
+        var previewTitle = item.querySelector('[data-preview-title]');
+        var previewType = item.querySelector('[data-preview-type]');
+
+        function updatePreview() {
+            if (!preview || !minHeightField) {
+                return;
+            }
+            var mh = parseInt(String(minHeightField.value || '420'), 10);
+            if (isNaN(mh)) {
+                mh = 420;
+            }
+            mh = Math.max(200, Math.min(1200, mh));
+            minHeightField.value = String(mh);
+            preview.style.height = mh + 'px';
+
+            if (colorField) {
+                preview.style.background = colorField.value || '#ffffff';
+            }
+            if (previewTitle && titleField) {
+                previewTitle.textContent = titleField.value ? titleField.value : 'Sekcja bez tytulu';
+            }
+            if (previewType && typeField) {
+                previewType.textContent = String(typeField.value || 'text').toUpperCase();
+            }
+        }
+
         item.querySelectorAll('[data-field]').forEach(function (field) {
-            field.addEventListener('input', sync);
-            field.addEventListener('change', sync);
+            field.addEventListener('input', function () {
+                updatePreview();
+                sync();
+            });
+            field.addEventListener('change', function () {
+                updatePreview();
+                sync();
+            });
         });
 
         item.querySelector('[data-remove-block]').addEventListener('click', function () {
@@ -133,6 +338,32 @@
             item.classList.remove('dragging');
             sync();
         });
+
+        var resizeHandle = item.querySelector('[data-resize-handle]');
+        if (resizeHandle && minHeightField) {
+            resizeHandle.addEventListener('mousedown', function (ev) {
+                ev.preventDefault();
+                var startY = ev.clientY;
+                var startH = parseInt(String(minHeightField.value || '420'), 10);
+
+                function onMove(moveEv) {
+                    var next = Math.max(200, Math.min(1200, startH + (moveEv.clientY - startY)));
+                    minHeightField.value = String(next);
+                    updatePreview();
+                    sync();
+                }
+
+                function onUp() {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                }
+
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+        }
+
+        updatePreview();
     }
 
     function renderEmpty() {
@@ -250,6 +481,13 @@
             a.click();
             a.remove();
             setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+        });
+    }
+
+    var sectionsFocusBtn = document.getElementById('builderSectionsFocusBtn');
+    if (sectionsFocusBtn) {
+        sectionsFocusBtn.addEventListener('click', function () {
+            list.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     }
 

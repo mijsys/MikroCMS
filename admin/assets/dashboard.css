@@ -337,6 +337,47 @@ td small {
 	margin-bottom: 12px;
 }
 
+.builder-section-preview {
+	position: relative;
+	min-height: 200px;
+	border: 1px solid rgba(123, 176, 213, 0.35);
+	border-radius: 12px;
+	overflow: hidden;
+	margin-bottom: 12px;
+	background: #ffffff;
+}
+
+.builder-section-overlay {
+	position: absolute;
+	left: 12px;
+	top: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 8px 10px;
+	border-radius: 10px;
+	background: rgba(8, 20, 31, 0.68);
+	color: #dff4ff;
+	font-size: 12px;
+	backdrop-filter: blur(4px);
+}
+
+.builder-resize-handle {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 12px;
+	cursor: ns-resize;
+	background: repeating-linear-gradient(
+		90deg,
+		rgba(25, 165, 185, 0.2) 0,
+		rgba(25, 165, 185, 0.2) 8px,
+		rgba(25, 165, 185, 0.45) 8px,
+		rgba(25, 165, 185, 0.45) 16px
+	);
+}
+
 .builder-toolbar {
 	display: flex;
 	flex-wrap: wrap;
@@ -384,6 +425,65 @@ td small {
 .toolbar-dragging {
 	opacity: 0.55;
 	box-shadow: 0 0 0 2px var(--accent);
+}
+
+.container-editor {
+	border: 1px dashed rgba(133, 189, 226, 0.45);
+	border-radius: 12px;
+	padding: 10px;
+	background: rgba(8, 27, 41, 0.45);
+}
+
+.container-editor-toolbar {
+	margin-bottom: 10px;
+}
+
+.container-editor-empty {
+	padding: 10px;
+	border: 1px dashed rgba(133, 189, 226, 0.35);
+	border-radius: 10px;
+	color: #9abfd8;
+	font-size: 12px;
+}
+
+.container-editor-list {
+	display: grid;
+	gap: 10px;
+}
+
+.container-editor-item {
+	border: 1px solid rgba(123, 176, 213, 0.25);
+	border-radius: 12px;
+	background: rgba(10, 31, 47, 0.82);
+	padding: 10px;
+}
+
+.container-editor-item.dragging {
+	opacity: 0.48;
+}
+
+.container-editor-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 8px;
+}
+
+.container-editor-handle {
+	cursor: grab;
+	color: #bfe9ff;
+	font-weight: 700;
+}
+
+.container-editor-fields {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px;
+}
+
+.container-editor-fields .full {
+	grid-column: 1 / -1;
 }
 
 .placement-item {
