@@ -4,8 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($page['title']) ?> | <?= htmlspecialchars($siteName) ?></title>
-    <meta name="description" content="<?= htmlspecialchars($page['excerpt'] ?: $siteTagline) ?>">
+    <?php $seoTitle = trim((string) ($page['meta_title'] ?? '')) !== '' ? (string) $page['meta_title'] : (string) $page['title']; ?>
+    <?php $seoDescription = trim((string) ($page['meta_description'] ?? '')) !== '' ? (string) $page['meta_description'] : (string) ($page['excerpt'] ?: $siteTagline); ?>
+    <title><?= htmlspecialchars($seoTitle) ?> | <?= htmlspecialchars($siteName) ?></title>
+    <meta name="description" content="<?= htmlspecialchars($seoDescription) ?>">
+    <meta property="og:title" content="<?= htmlspecialchars($seoTitle) ?>">
+    <meta property="og:description" content="<?= htmlspecialchars($seoDescription) ?>">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="<?= htmlspecialchars(cms_url_with_lang(['page' => (string) ($page['slug'] ?? '')])) ?>">
     <link rel="stylesheet" href="<?= htmlspecialchars(cms_url('themes/default/style.css')) ?>">
     <?= cms_get_theme_css() ?>
 </head>

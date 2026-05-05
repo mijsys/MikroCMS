@@ -150,6 +150,10 @@ foreach ($pages as $pageItem) {
                         </div>
 
                         <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.excerpt', 'Lead / zajawka')) ?></label><textarea name="excerpt"><?= htmlspecialchars($editPage['excerpt'] ?? '') ?></textarea></div>
+                        <div class="split">
+                            <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.meta_title', 'SEO: Meta title')) ?></label><input type="text" name="meta_title" maxlength="191" placeholder="<?= htmlspecialchars(cms_t('admin.pages.form.meta_title.ph', 'Opcjonalnie - inny tytul dla SEO')) ?>" value="<?= htmlspecialchars($editPage['meta_title'] ?? '') ?>"></div>
+                            <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.meta_description', 'SEO: Meta description')) ?></label><input type="text" name="meta_description" maxlength="320" placeholder="<?= htmlspecialchars(cms_t('admin.pages.form.meta_description.ph', 'Opcjonalnie - opis dla Google i social')) ?>" value="<?= htmlspecialchars($editPage['meta_description'] ?? '') ?>"></div>
+                        </div>
                         <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.content', 'Tresc dodatkowa (fallback)')) ?></label><textarea name="content"><?= htmlspecialchars($editPage['content'] ?? '') ?></textarea></div>
 
                         <div class="split">

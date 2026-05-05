@@ -728,6 +728,8 @@ function cms_save_page(array $data, ?int $id = null): int
     $slug = cms_slugify($data['slug'] ?? $title);
     $excerpt = trim($data['excerpt'] ?? '');
     $content = trim($data['content'] ?? '');
+    $metaTitle = trim((string) ($data['meta_title'] ?? ''));
+    $metaDescription = trim((string) ($data['meta_description'] ?? ''));
     $parentId = !empty($data['parent_id']) ? (int) $data['parent_id'] : null;
     $status = ($data['status'] ?? 'draft') === 'published' ? 'published' : 'draft';
     $isHomepage = !empty($data['is_homepage']) ? 1 : 0;
@@ -749,13 +751,13 @@ function cms_save_page(array $data, ?int $id = null): int
     }
 
     if ($id !== null) {
-        $stmt = $db->prepare('UPDATE cms_pages SET parent_id = ?, title = ?, slug = ?, excerpt = ?, content = ?, builder_data = ?, status = ?, is_homepage = ?, sort_order = ?, template = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
-        $stmt->execute([$parentId, $title, $slug, $excerpt, $content, $builderData, $status, $isHomepage, $sortOrder, $template, $id]);
+        $stmt = $db->prepare('UPDATE cms_pages SET parent_id = ?, title = ?, slug = ?, excerpt = ?, content = ?, meta_title = ?, meta_description = ?, builder_data = ?, status = ?, is_homepage = ?, sort_order = ?, template = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
+        $stmt->execute([$parentId, $title, $slug, $excerpt, $content, $metaTitle, $metaDescription, $builderData, $status, $isHomepage, $sortOrder, $template, $id]);
         return $id;
     }
 
-    $stmt = $db->prepare('INSERT INTO cms_pages (parent_id, title, slug, excerpt, content, builder_data, status, is_homepage, sort_order, template) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    $stmt->execute([$parentId, $title, $slug, $excerpt, $content, $builderData, $status, $isHomepage, $sortOrder, $template]);
+    $stmt = $db->prepare('INSERT INTO cms_pages (parent_id, title, slug, excerpt, content, meta_title, meta_description, builder_data, status, is_homepage, sort_order, template) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $stmt->execute([$parentId, $title, $slug, $excerpt, $content, $metaTitle, $metaDescription, $builderData, $status, $isHomepage, $sortOrder, $template]);
     return (int) $db->lastInsertId();
 }
 
