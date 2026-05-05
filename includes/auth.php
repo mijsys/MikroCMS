@@ -248,6 +248,24 @@ function cms_verify_2fa_login(array $user, string $totpCode, string $mijauthFile
     return MijAuth::verifyAuthFileWithToken($mijauthFileContent, $userKey, $token, $userId);
 }
 
+function cms_verify_user_2fa_challenge(array $user, string $totpCode, string $mijauthFileContent): bool
+{
+    $secret = trim((string) ($user['twofa_totp_secret'] ?? ''));
+    $userKey = trim((string) ($user['twofa_mijauth_key'] ?? ''));
+    $token = trim((string) ($user['twofa_mijauth_token'] ?? ''));
+    $userId = (string) ($user['id'] ?? '');
+
+    if ($secret === '' || $userKey === '' || $token === '' || $userId === '') {
+        return false;
+    }
+
+    if (!MijAuth::verifyTotp($secret, $totpCode)) {
+        return false;
+    }
+
+    return MijAuth::verifyAuthFileWithToken($mijauthFileContent, $userKey, $token, $userId);
+}
+
 function cms_require_login(): void
 {
     if (!cms_is_logged_in()) {
