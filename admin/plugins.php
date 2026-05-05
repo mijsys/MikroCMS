@@ -115,6 +115,7 @@ foreach ($placements as $placement) {
 $enabledPlugins = cms_enabled_plugins();
 $facebookMode = cms_get_setting('facebook_plugin_mode', 'posts');
 $facebookLimit = cms_get_setting('facebook_plugin_limit', '5');
+$adminTheme = cms_admin_theme($user);
 ?>
 <!DOCTYPE html>
 <html lang="<?= htmlspecialchars(cms_admin_language()) ?>">
@@ -124,7 +125,7 @@ $facebookLimit = cms_get_setting('facebook_plugin_limit', '5');
     <title><?= htmlspecialchars(cms_t('admin.plugins.title', 'Pluginy CMS')) ?></title>
     <link rel="stylesheet" href="<?= htmlspecialchars(cms_url('admin/assets/dashboard.css')) ?>">
 </head>
-<body>
+<body class="admin-theme-<?= htmlspecialchars($adminTheme) ?>">
 <div class="layout">
     <aside class="sidebar">
         <div class="brand">CMS</div>

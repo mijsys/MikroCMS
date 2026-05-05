@@ -83,6 +83,7 @@ $parentMap = [];
 foreach ($pages as $pageItem) {
     $parentMap[(int) $pageItem['id']] = $pageItem['title'];
 }
+$adminTheme = cms_admin_theme($user);
 ?>
 <!DOCTYPE html>
 <html lang="<?= htmlspecialchars(cms_admin_language()) ?>">
@@ -92,7 +93,7 @@ foreach ($pages as $pageItem) {
     <title><?= htmlspecialchars(cms_t('admin.pages.title', 'Strony CMS')) ?></title>
     <link rel="stylesheet" href="<?= htmlspecialchars(cms_url('admin/assets/dashboard.css')) ?>">
 </head>
-<body>
+<body class="admin-theme-<?= htmlspecialchars($adminTheme) ?>">
 <div class="layout">
     <aside class="sidebar">
         <div class="brand">CMS</div>
@@ -215,6 +216,10 @@ foreach ($pages as $pageItem) {
                                 <button class="btn secondary" type="button" id="builderExportBtn"><?= htmlspecialchars(cms_t('admin.pages.form.export_json', 'Eksport JSON')) ?></button>
                                 <label class="btn secondary" for="builderImportFile" style="display:inline-flex;align-items:center;cursor:pointer"><?= htmlspecialchars(cms_t('admin.pages.form.import_json', 'Import JSON')) ?></label>
                                 <input id="builderImportFile" type="file" accept="application/json,.json" style="display:none">
+                            </div>
+                            <div class="builder-canvas-wrap">
+                                <div class="tiny" style="margin-bottom:8px">Canvas 12-kolumnowy (1.1.4): pozycja sekcji wg X/Y/W/H</div>
+                                <div id="builderCanvasGrid" class="builder-canvas-grid"></div>
                             </div>
                             <div id="builderEmptyV2" class="builder-empty"><?= htmlspecialchars(cms_t('admin.pages.form.builder_empty', 'Builder jest pusty. Dodaj pierwszy blok.')) ?></div>
                             <div id="builderListV2" class="builder-list"></div>

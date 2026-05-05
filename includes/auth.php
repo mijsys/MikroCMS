@@ -288,11 +288,20 @@ function cms_current_user(): ?array
         return null;
     }
 
-    $stmt = cms_db()->prepare('SELECT id, username, email, role, twofa_enabled, twofa_totp_secret, twofa_mijauth_key, twofa_mijauth_token, twofa_recovery_codes FROM cms_users WHERE id = ?');
+    $stmt = cms_db()->prepare('SELECT id, username, email, role, admin_theme, twofa_enabled, twofa_totp_secret, twofa_mijauth_key, twofa_mijauth_token, twofa_recovery_codes FROM cms_users WHERE id = ?');
     $stmt->execute([(int) $_SESSION['cms_user_id']]);
     $user = $stmt->fetch();
 
     return $user ?: null;
+}
+
+function cms_set_user_admin_theme(int $userId, string $theme): void
+{
+    $normalized = strtolower(trim($theme));
+    if (!in_array($normalized, ['dark', 'light', 'oldschool', 'sunset'], true)) {
+        $normalized = 'dark';
+    }
+    cms_db()->prepare('UPDATE cms_users SET admin_theme = ? WHERE id = ?')->execute([$normalized, $userId]);
 }
 
 function cms_update_user_2fa_setup(int $userId, string $totpSecret, string $mijauthKeyBase64, string $mijauthToken, bool $enabled, ?string $recoveryCodesJson = null): void

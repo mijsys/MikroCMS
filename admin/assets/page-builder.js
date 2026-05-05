@@ -3,6 +3,7 @@
 
     var list = document.getElementById('builderListV2');
     var hidden = document.getElementById('builderDataInputV2');
+    var canvas = document.getElementById('builderCanvasGrid');
     if (!list || !hidden) {
         return;
     }
@@ -38,7 +39,11 @@
             gallery_urls: '',
             container_columns: '2',
             container_items_json: '[\n  {"title":"Karta 1","text":"Opis elementu"},\n  {"title":"Karta 2","text":"Opis elementu"}\n]',
-            plugin_slug: ''
+            plugin_slug: '',
+            layout_x: '0',
+            layout_y: '0',
+            layout_w: '12',
+            layout_h: '2'
         };
     }
 
@@ -57,6 +62,7 @@
                     '<div class="builder-section-overlay">' +
                         '<strong data-preview-title>' + esc(block.title || 'Sekcja bez tytulu') + '</strong>' +
                         '<span data-preview-type>' + esc(String(block.type).toUpperCase()) + '</span>' +
+                        '<small data-preview-text>' + esc((String(block.text || '').trim().slice(0, 90)) || 'Brak tresci') + '</small>' +
                     '</div>' +
                     '<div class="builder-resize-handle" data-resize-handle title="Przeciagnij, aby zmienic wysokosc sekcji"></div>' +
                 '</div>' +
@@ -76,6 +82,10 @@
                 '</select></div>' +
                 '<div><label>Tytul</label><input type="text" data-field="title" value="' + esc(block.title) + '"></div>' +
                 '<div><label>Minimalna wysokosc</label><input type="number" min="200" max="1200" step="10" data-field="min_height" value="' + esc(block.min_height) + '"></div>' +
+                '<div><label>Grid X (0-11)</label><input type="number" min="0" max="11" step="1" data-field="layout_x" value="' + esc(block.layout_x) + '"></div>' +
+                '<div><label>Grid Y (0-200)</label><input type="number" min="0" max="200" step="1" data-field="layout_y" value="' + esc(block.layout_y) + '"></div>' +
+                '<div><label>Grid W (1-12)</label><input type="number" min="1" max="12" step="1" data-field="layout_w" value="' + esc(block.layout_w) + '"></div>' +
+                '<div><label>Grid H (1-12)</label><input type="number" min="1" max="12" step="1" data-field="layout_h" value="' + esc(block.layout_h) + '"></div>' +
                 '<div class="full"><label>Tekst</label><textarea data-field="text">' + esc(block.text) + '</textarea></div>' +
                 '<div><label>Kolor tla</label><input type="color" data-field="background_color" value="' + esc(block.background_color) + '"></div>' +
                 '<div><label>Zachowanie tla</label><select data-field="background_attachment"><option value="scroll">Przewija sie</option><option value="fixed">Nieruchome</option></select></div>' +
@@ -273,10 +283,47 @@
             item.querySelectorAll('[data-field]').forEach(function (field) {
                 data[field.getAttribute('data-field')] = field.value;
             });
+
+            data.layout_x = String(Math.max(0, Math.min(11, parseInt(String(data.layout_x || '0'), 10) || 0)));
+            data.layout_y = String(Math.max(0, Math.min(200, parseInt(String(data.layout_y || '0'), 10) || 0)));
+            data.layout_w = String(Math.max(1, Math.min(12, parseInt(String(data.layout_w || '12'), 10) || 12)));
+            data.layout_h = String(Math.max(1, Math.min(12, parseInt(String(data.layout_h || '2'), 10) || 2)));
             payload.push(data);
         });
         hidden.value = JSON.stringify(payload);
+        renderCanvas(payload);
         document.dispatchEvent(new CustomEvent('cms:builder:change'));
+    }
+
+    function renderCanvas(payload) {
+        if (!canvas) {
+            return;
+        }
+        canvas.innerHTML = '';
+        if (!Array.isArray(payload) || payload.length === 0) {
+            var empty = document.createElement('div');
+            empty.className = 'builder-canvas-empty';
+            empty.textContent = 'Canvas jest pusty. Dodaj sekcje, aby zobaczyc siatke.';
+            canvas.appendChild(empty);
+            return;
+        }
+
+        payload.forEach(function (block, idx) {
+            var x = Math.max(0, Math.min(11, parseInt(String(block.layout_x || '0'), 10) || 0));
+            var y = Math.max(0, Math.min(200, parseInt(String(block.layout_y || '0'), 10) || 0));
+            var w = Math.max(1, Math.min(12, parseInt(String(block.layout_w || '12'), 10) || 12));
+            var h = Math.max(1, Math.min(12, parseInt(String(block.layout_h || '2'), 10) || 2));
+            if (x + w > 12) {
+                w = 12 - x;
+            }
+
+            var card = document.createElement('div');
+            card.className = 'builder-canvas-item';
+            card.style.gridColumn = (x + 1) + ' / span ' + w;
+            card.style.gridRow = (y + 1) + ' / span ' + h;
+            card.innerHTML = '<strong>' + esc(block.title || ('Sekcja ' + (idx + 1))) + '</strong><span>' + esc(String(block.type || 'text').toUpperCase()) + ' • x' + x + ' y' + y + ' w' + w + ' h' + h + '</span>';
+            canvas.appendChild(card);
+        });
     }
 
     function bindItem(item) {
@@ -285,10 +332,12 @@
         var minHeightField = item.querySelector('[data-field="min_height"]');
         var preview = item.querySelector('[data-section-preview]');
         var titleField = item.querySelector('[data-field="title"]');
+        var textField = item.querySelector('[data-field="text"]');
         var typeField = item.querySelector('[data-field="type"]');
         var colorField = item.querySelector('[data-field="background_color"]');
         var previewTitle = item.querySelector('[data-preview-title]');
         var previewType = item.querySelector('[data-preview-type]');
+        var previewText = item.querySelector('[data-preview-text]');
 
         function updatePreview() {
             if (!preview || !minHeightField) {
@@ -310,6 +359,10 @@
             }
             if (previewType && typeField) {
                 previewType.textContent = String(typeField.value || 'text').toUpperCase();
+            }
+            if (previewText && textField) {
+                var shortText = String(textField.value || '').trim();
+                previewText.textContent = shortText ? shortText.slice(0, 90) : 'Brak tresci';
             }
         }
 

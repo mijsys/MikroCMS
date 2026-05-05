@@ -78,6 +78,7 @@ foreach ($previewPartsAllowed as $requiredPart) {
         $previewLayout[] = $requiredPart;
     }
 }
+$adminTheme = cms_admin_theme($user);
 ?>
 <!DOCTYPE html>
 <html lang="<?= htmlspecialchars(cms_admin_language()) ?>">
@@ -87,7 +88,7 @@ foreach ($previewPartsAllowed as $requiredPart) {
     <title><?= htmlspecialchars(cms_t('admin.appearance.title', 'Wyglad CMS')) ?></title>
     <link rel="stylesheet" href="<?= htmlspecialchars(cms_url('admin/assets/dashboard.css')) ?>">
 </head>
-<body>
+<body class="admin-theme-<?= htmlspecialchars($adminTheme) ?>">
 <div class="layout">
     <aside class="sidebar">
         <div class="brand">CMS</div>

@@ -11,7 +11,7 @@ $user = cms_current_user();
 $db = cms_db();
 
 $loadUserById = static function (int $userId) use ($db): ?array {
-    $stmt = $db->prepare('SELECT id, username, email, role, twofa_enabled, twofa_totp_secret, twofa_mijauth_key, twofa_mijauth_token, twofa_recovery_codes FROM cms_users WHERE id = ?');
+    $stmt = $db->prepare('SELECT id, username, email, role, admin_theme, twofa_enabled, twofa_totp_secret, twofa_mijauth_key, twofa_mijauth_token, twofa_recovery_codes FROM cms_users WHERE id = ?');
     $stmt->execute([$userId]);
     $row = $stmt->fetch();
 
@@ -139,6 +139,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         cms_set_setting('site_default_language', $defaultLanguage);
         cms_set_setting('site_enabled_languages', implode(',', $enabled));
         cms_set_setting('admin_language', $adminLanguage);
+        $adminTheme = strtolower(trim((string) ($_POST['admin_theme'] ?? 'dark')));
+        if (!in_array($adminTheme, ['dark', 'light', 'oldschool', 'sunset'], true)) {
+            $adminTheme = 'dark';
+        }
+        if ($user && !empty($user['id'])) {
+            cms_set_user_admin_theme((int) $user['id'], $adminTheme);
+        }
         cms_set_setting('cms_update_manifest_url', trim($_POST['cms_update_manifest_url'] ?? ''));
         cms_set_setting('store_db_manifest_url', trim($_POST['store_db_manifest_url'] ?? ''));
         cms_set_setting('plugin_store_manifest_url', trim($_POST['plugin_store_manifest_url'] ?? ''));
@@ -185,6 +192,7 @@ $twoFaRecoveryDownloadHref = $twoFaRecoveryFileContent !== '' ? 'data:text/plain
 $twoFaQrUrl = $twoFaProvisioningUri !== ''
     ? 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' . rawurlencode($twoFaProvisioningUri)
     : '';
+$adminTheme = cms_admin_theme($user);
 ?>
 <!DOCTYPE html>
 <html lang="<?= htmlspecialchars(cms_admin_language()) ?>">
@@ -194,7 +202,7 @@ $twoFaQrUrl = $twoFaProvisioningUri !== ''
     <title><?= htmlspecialchars(cms_t('admin.settings.title', 'Ustawienia CMS')) ?></title>
     <link rel="stylesheet" href="<?= htmlspecialchars(cms_url('admin/assets/dashboard.css')) ?>">
 </head>
-<body>
+<body class="admin-theme-<?= htmlspecialchars($adminTheme) ?>">
 <div class="layout">
     <aside class="sidebar">
         <div class="brand">CMS</div>
@@ -228,6 +236,16 @@ $twoFaQrUrl = $twoFaProvisioningUri !== ''
                             <div class="field"><label><?= htmlspecialchars(cms_t('admin.settings.enabled_langs', 'Aktywne jezyki (CSV)')) ?></label><input type="text" name="site_enabled_languages" placeholder="pl,en,de" value="<?= htmlspecialchars(cms_get_setting('site_enabled_languages', 'pl,en')) ?>"></div>
                         </div>
                         <div class="field"><label><?= htmlspecialchars(cms_t('admin.settings.admin_lang', 'Jezyk panelu admin')) ?></label><input type="text" name="admin_language" placeholder="pl" value="<?= htmlspecialchars(cms_get_setting('admin_language', cms_default_language())) ?>"></div>
+                        <div class="field"><label>Motyw panelu admin</label><select name="admin_theme" id="adminThemeSelect"><option value="dark" <?= $adminTheme === 'dark' ? 'selected' : '' ?>>Nowoczesny ciemny</option><option value="light" <?= $adminTheme === 'light' ? 'selected' : '' ?>>Nowoczesny jasny</option><option value="oldschool" <?= $adminTheme === 'oldschool' ? 'selected' : '' ?>>Oldschool</option><option value="sunset" <?= $adminTheme === 'sunset' ? 'selected' : '' ?>>Neon Sunset</option></select></div>
+                        <div class="field" style="margin-top:-2px">
+                            <label>Podglad motywu panelu</label>
+                            <div class="admin-theme-picker-preview" id="adminThemePreviewCards">
+                                <button class="admin-theme-card" type="button" data-theme-preview="dark"><span class="theme-dot"></span><strong>Ciemny</strong></button>
+                                <button class="admin-theme-card" type="button" data-theme-preview="light"><span class="theme-dot"></span><strong>Jasny</strong></button>
+                                <button class="admin-theme-card" type="button" data-theme-preview="oldschool"><span class="theme-dot"></span><strong>Oldschool</strong></button>
+                                <button class="admin-theme-card" type="button" data-theme-preview="sunset"><span class="theme-dot"></span><strong>Neon Sunset</strong></button>
+                            </div>
+                        </div>
                         <div class="field"><label><?= htmlspecialchars(cms_t('admin.settings.site_mode', 'Tryb strony')) ?></label><select name="site_mode"><option value="multipage" <?= cms_site_mode() === 'multipage' ? 'selected' : '' ?>><?= htmlspecialchars(cms_t('admin.settings.site_mode.multipage', 'Wiele stron')) ?></option><option value="onepage" <?= cms_site_mode() === 'onepage' ? 'selected' : '' ?>>Onepage</option></select></div>
                         <div class="field"><label><?= htmlspecialchars(cms_t('admin.settings.theme_variant', 'Wariant motywu')) ?></label><select name="theme_variant"><option value="multipage" <?= cms_theme_variant() === 'multipage' ? 'selected' : '' ?>><?= htmlspecialchars(cms_t('admin.settings.theme_variant.multipage', 'Motyw wielostronicowy')) ?></option><option value="onepage" <?= cms_theme_variant() === 'onepage' ? 'selected' : '' ?>><?= htmlspecialchars(cms_t('admin.settings.theme_variant.onepage', 'Motyw onepage')) ?></option></select></div>
                         <div class="field"><label><?= htmlspecialchars(cms_t('admin.settings.manifest.cms', 'Manifest aktualizacji CMS (GitHub Raw URL)')) ?></label><input type="url" name="cms_update_manifest_url" placeholder="https://raw.githubusercontent.com/.../cms-update.json" value="<?= htmlspecialchars(cms_get_setting('cms_update_manifest_url', '')) ?>"></div>
@@ -363,5 +381,28 @@ $twoFaQrUrl = $twoFaProvisioningUri !== ''
 </script>
 <?php endif; ?>
 <script src="<?= htmlspecialchars(cms_url('admin/assets/dashboard.js?v=' . rawurlencode(CMS_CODE_VERSION))) ?>"></script>
+<script>
+(function(){
+    var select = document.getElementById('adminThemeSelect');
+    var cardsWrap = document.getElementById('adminThemePreviewCards');
+    if (!select || !cardsWrap) { return; }
+    var cards = cardsWrap.querySelectorAll('[data-theme-preview]');
+    function syncState() {
+        var val = String(select.value || 'dark');
+        cards.forEach(function(card){
+            var active = card.getAttribute('data-theme-preview') === val;
+            card.classList.toggle('active', active);
+        });
+    }
+    cards.forEach(function(card){
+        card.addEventListener('click', function(){
+            select.value = card.getAttribute('data-theme-preview') || 'dark';
+            syncState();
+        });
+    });
+    select.addEventListener('change', syncState);
+    syncState();
+}());
+</script>
 </body>
 </html>

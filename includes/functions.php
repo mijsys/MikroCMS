@@ -140,6 +140,19 @@ function cms_admin_language(): string
     return in_array($configured, $allowed, true) ? $configured : $default;
 }
 
+function cms_admin_theme(?array $user = null): string
+{
+    $allowed = ['dark', 'light', 'oldschool', 'sunset'];
+    $candidate = '';
+    if (is_array($user) && isset($user['admin_theme'])) {
+        $candidate = strtolower(trim((string) $user['admin_theme']));
+    }
+    if ($candidate === '') {
+        $candidate = strtolower(trim((string) cms_get_setting('admin_theme', 'dark')));
+    }
+    return in_array($candidate, $allowed, true) ? $candidate : 'dark';
+}
+
 function cms_current_language(): string
 {
     static $current = null;
@@ -444,7 +457,12 @@ function cms_page_revisions(int $pageId, int $limit = 20): array
     }
     $limit = max(1, min(100, $limit));
 
-    $sql = 'SELECT r.*, u.username AS created_by_username\n            FROM cms_page_revisions r\n            LEFT JOIN cms_users u ON u.id = r.created_by\n            WHERE r.page_id = ?\n            ORDER BY r.id DESC\n            LIMIT ' . (int) $limit;
+        $sql = "SELECT r.*, u.username AS created_by_username
+            FROM cms_page_revisions r
+            LEFT JOIN cms_users u ON u.id = r.created_by
+            WHERE r.page_id = ?
+            ORDER BY r.id DESC
+            LIMIT " . (int) $limit;
     $stmt = cms_db()->prepare($sql);
     $stmt->execute([$pageId]);
     return $stmt->fetchAll() ?: [];
@@ -666,6 +684,10 @@ function cms_builder_block_defaults(string $type = 'text'): array
         'container_columns' => '2',
         'container_items_json' => "[\n  {\"title\":\"Karta 1\",\"text\":\"Opis elementu\"},\n  {\"title\":\"Karta 2\",\"text\":\"Opis elementu\"}\n]",
         'plugin_slug' => '',
+        'layout_x' => '0',
+        'layout_y' => '0',
+        'layout_w' => '12',
+        'layout_h' => '2',
     ];
 }
 
@@ -731,6 +753,10 @@ function cms_normalize_builder_blocks(mixed $input): array
         $block['container_items_json'] = json_encode($normalizedItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $pluginSlug = trim((string) ($item['plugin_slug'] ?? ''));
         $block['plugin_slug'] = preg_match('/^[a-z0-9\-]+$/', $pluginSlug) ? $pluginSlug : '';
+        $block['layout_x'] = (string) max(0, min(11, (int) ($item['layout_x'] ?? 0)));
+        $block['layout_y'] = (string) max(0, min(200, (int) ($item['layout_y'] ?? 0)));
+        $block['layout_w'] = (string) max(1, min(12, (int) ($item['layout_w'] ?? 12)));
+        $block['layout_h'] = (string) max(1, min(12, (int) ($item['layout_h'] ?? 2)));
         $blocks[] = $block;
     }
 
