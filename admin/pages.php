@@ -159,56 +159,71 @@ $adminTheme = cms_admin_theme($user);
                         <input type="hidden" name="edit_lang" value="<?= htmlspecialchars($editorLang) ?>">
                         <input type="hidden" name="builder_data" id="builderDataInputV2" value="<?= htmlspecialchars(json_encode($builderBlocks, JSON_UNESCAPED_UNICODE)) ?>">
 
-                        <div class="split">
-                            <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.title', 'Tytul')) ?></label><input type="text" name="title" required value="<?= htmlspecialchars($editPage['title'] ?? '') ?>"></div>
-                            <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.slug', 'Slug')) ?></label><input type="text" name="slug" value="<?= htmlspecialchars($editPage['slug'] ?? '') ?>"></div>
-                        </div>
+                        <div class="page-studio-layout">
+                            <div class="page-studio-main">
+                                <section class="page-studio-card page-studio-hero">
+                                    <div class="page-studio-title">
+                                        <strong>Page Studio</strong>
+                                        <span class="tiny">Uklad jak w generatorach stron: tresc po lewej, ustawienia po prawej.</span>
+                                    </div>
+                                    <div class="split">
+                                        <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.title', 'Tytul')) ?></label><input type="text" name="title" required value="<?= htmlspecialchars($editPage['title'] ?? '') ?>"></div>
+                                        <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.slug', 'Slug')) ?></label><input type="text" name="slug" value="<?= htmlspecialchars($editPage['slug'] ?? '') ?>"></div>
+                                    </div>
+                                </section>
 
-                        <div class="split">
-                            <div class="field">
-                                <label><?= htmlspecialchars(cms_t('admin.pages.form.parent', 'Rodzic strony')) ?></label>
-                                <select name="parent_id">
-                                    <option value=""><?= htmlspecialchars(cms_t('admin.pages.form.no_parent', 'Brak rodzica')) ?></option>
-                                    <?php foreach ($rootPages as $rootPage): ?>
-                                        <?php if ($editPage && (int) $editPage['id'] === (int) $rootPage['id']) { continue; } ?>
-                                        <option value="<?= (int) $rootPage['id'] ?>" <?= (($editPage['parent_id'] ?? null) == $rootPage['id']) ? 'selected' : '' ?>><?= htmlspecialchars($rootPage['title']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.sort', 'Kolejnosc')) ?></label><input type="number" name="sort_order" value="<?= htmlspecialchars((string) ($editPage['sort_order'] ?? '0')) ?>"></div>
-                        </div>
-
-                        <div class="accordion">
-                            <details open>
-                                <summary><?= htmlspecialchars(cms_t('admin.pages.form.section.content_seo', 'Tresc i SEO')) ?></summary>
-                                <div class="accordion-body">
+                                <section class="page-studio-card">
+                                    <h3><?= htmlspecialchars(cms_t('admin.pages.form.section.content_seo', 'Tresc i SEO')) ?></h3>
                                     <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.excerpt', 'Lead / zajawka')) ?></label><textarea name="excerpt"><?= htmlspecialchars($editPage['excerpt'] ?? '') ?></textarea></div>
                                     <div class="split">
                                         <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.meta_title', 'SEO: Meta title')) ?></label><input type="text" name="meta_title" maxlength="191" placeholder="<?= htmlspecialchars(cms_t('admin.pages.form.meta_title.ph', 'Opcjonalnie - inny tytul dla SEO')) ?>" value="<?= htmlspecialchars($editPage['meta_title'] ?? '') ?>"></div>
                                         <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.meta_description', 'SEO: Meta description')) ?></label><input type="text" name="meta_description" maxlength="320" placeholder="<?= htmlspecialchars(cms_t('admin.pages.form.meta_description.ph', 'Opcjonalnie - opis dla Google i social')) ?>" value="<?= htmlspecialchars($editPage['meta_description'] ?? '') ?>"></div>
                                     </div>
                                     <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.content', 'Tresc dodatkowa (fallback)')) ?></label><textarea name="content"><?= htmlspecialchars($editPage['content'] ?? '') ?></textarea></div>
-                                </div>
-                            </details>
-                        </div>
+                                </section>
 
-                        <div class="split">
-                            <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.status', 'Status')) ?></label><select name="status"><option value="draft" <?= (($editPage['status'] ?? '') === 'draft') ? 'selected' : '' ?>><?= htmlspecialchars(cms_t('admin.pages.form.status.draft', 'Szkic')) ?></option><option value="published" <?= (($editPage['status'] ?? '') === 'published') ? 'selected' : '' ?>><?= htmlspecialchars(cms_t('admin.pages.form.status.published', 'Opublikowana')) ?></option></select></div>
-                            <div class="field inline"><label><input type="checkbox" name="is_homepage" value="1" <?= !empty($editPage['is_homepage']) ? 'checked' : '' ?>> <?= htmlspecialchars(cms_t('admin.pages.form.home', 'Ustaw jako strone glowna')) ?></label></div>
-                        </div>
-
-                        <div class="accordion">
-                            <details open>
-                                <summary><?= htmlspecialchars(cms_t('admin.pages.form.section.builder', 'Builder i sekcje strony')) ?></summary>
-                                <div class="accordion-body">
-                                    <div class="field">
+                                <section class="page-studio-card page-studio-builder-launch">
+                                    <div class="field" style="margin-bottom:0">
                                         <label><?= htmlspecialchars(cms_t('admin.pages.form.builder', 'Builder wygladu strony')) ?></label>
                                         <div class="tiny"><?= htmlspecialchars(cms_t('admin.pages.form.builder_help', 'Dodawaj bloki, przeciagnij aby zmienic kolejnosc, eksportuj/importuj JSON i dziel gotowe uklady.')) ?></div>
                                         <div class="tiny" style="margin-top:6px"><?= htmlspecialchars(cms_t('admin.pages.form.builder_help_easy', 'Tryb wizualny: otworz okno kreatora i ukladaj sekcje metoda drag and drop bez znajomosci kodu.')) ?></div>
                                     </div>
-                                    <button class="btn" type="button" id="openBuilderWindowBtn" style="margin-bottom:12px"><?= htmlspecialchars(cms_t('admin.pages.form.open_builder_window', 'Otworz okno kreatora strony')) ?></button>
-                                </div>
-                            </details>
+                                    <button class="btn" type="button" id="openBuilderWindowBtn"><?= htmlspecialchars(cms_t('admin.pages.form.open_builder_window', 'Otworz okno kreatora strony')) ?></button>
+                                </section>
+                            </div>
+
+                            <aside class="page-studio-side">
+                                <section class="page-studio-card">
+                                    <h3>Ustawienia publikacji</h3>
+                                    <div class="field">
+                                        <label><?= htmlspecialchars(cms_t('admin.pages.form.parent', 'Rodzic strony')) ?></label>
+                                        <select name="parent_id">
+                                            <option value=""><?= htmlspecialchars(cms_t('admin.pages.form.no_parent', 'Brak rodzica')) ?></option>
+                                            <?php foreach ($rootPages as $rootPage): ?>
+                                                <?php if ($editPage && (int) $editPage['id'] === (int) $rootPage['id']) { continue; } ?>
+                                                <option value="<?= (int) $rootPage['id'] ?>" <?= (($editPage['parent_id'] ?? null) == $rootPage['id']) ? 'selected' : '' ?>><?= htmlspecialchars($rootPage['title']) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="split">
+                                        <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.sort', 'Kolejnosc')) ?></label><input type="number" name="sort_order" value="<?= htmlspecialchars((string) ($editPage['sort_order'] ?? '0')) ?>"></div>
+                                        <div class="field"><label><?= htmlspecialchars(cms_t('admin.pages.form.status', 'Status')) ?></label><select name="status"><option value="draft" <?= (($editPage['status'] ?? '') === 'draft') ? 'selected' : '' ?>><?= htmlspecialchars(cms_t('admin.pages.form.status.draft', 'Szkic')) ?></option><option value="published" <?= (($editPage['status'] ?? '') === 'published') ? 'selected' : '' ?>><?= htmlspecialchars(cms_t('admin.pages.form.status.published', 'Opublikowana')) ?></option></select></div>
+                                    </div>
+                                    <div class="field inline" style="margin-bottom:0"><label><input type="checkbox" name="is_homepage" value="1" <?= !empty($editPage['is_homepage']) ? 'checked' : '' ?>> <?= htmlspecialchars(cms_t('admin.pages.form.home', 'Ustaw jako strone glowna')) ?></label></div>
+                                </section>
+
+                                <section class="page-studio-card page-studio-actions">
+                                    <h3>Akcje</h3>
+                                    <div class="actions page-studio-actions-list">
+                                        <button class="btn" type="submit"><?= htmlspecialchars(cms_t('admin.pages.form.save', 'Zapisz strone')) ?></button>
+                                        <?php if ($editPage && !empty($editPage['slug'])): ?>
+                                        <button id="pagePreviewBtn" class="btn secondary" type="button"><?= htmlspecialchars(cms_t('admin.pages.form.preview', 'Podglad')) ?> &#9673;</button>
+                                        <?php endif; ?>
+                                        <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>"><?= htmlspecialchars(cms_t('admin.pages.form.clear', 'Wyczysc formularz')) ?></a>
+                                        <span id="autosaveBadge" class="autosave-badge"></span>
+                                    </div>
+                                </section>
+                            </aside>
                         </div>
 
                         <div id="builderWindowBackdrop" class="builder-window-backdrop"></div>
@@ -220,6 +235,21 @@ $adminTheme = cms_admin_theme($user);
                                 </div>
                                 <button class="btn danger" type="button" id="closeBuilderWindowBtn"><?= htmlspecialchars(cms_t('admin.pages.form.close_builder_window', 'Zamknij okno')) ?></button>
                             </div>
+                            <?php if ($editPage && $pageRevisions !== []): ?>
+                            <div class="builder-revision-strip">
+                                <div class="tiny">1.1.7 Quick restore: przywroc layout z historii strony</div>
+                                <div class="builder-revision-strip-items">
+                                    <?php foreach (array_slice($pageRevisions, 0, 6) as $revision): ?>
+                                    <form method="post" onsubmit="return confirm('<?= htmlspecialchars(cms_t('admin.pages.revisions.confirm_restore', 'Przywrocic te wersje strony?')) ?>');">
+                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
+                                        <input type="hidden" name="action" value="restore_revision">
+                                        <input type="hidden" name="revision_id" value="<?= (int) ($revision['id'] ?? 0) ?>">
+                                        <button class="btn ghost" type="submit">#<?= (int) ($revision['id'] ?? 0) ?> · <?= htmlspecialchars(substr((string) ($revision['created_at'] ?? ''), 5, 11)) ?></button>
+                                    </form>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
                             <div class="builder-toolbar">
                                 <button class="btn ghost" type="button" data-builder2-add="hero">+ Hero</button>
                                 <button class="btn ghost" type="button" data-builder2-add="text">+ Text</button>
@@ -270,14 +300,6 @@ $adminTheme = cms_admin_theme($user);
                             </div>
                         </div>
 
-                        <div class="actions" style="margin-top:18px;align-items:center;flex-wrap:wrap">
-                            <button class="btn" type="submit"><?= htmlspecialchars(cms_t('admin.pages.form.save', 'Zapisz strone')) ?></button>
-                            <?php if ($editPage && !empty($editPage['slug'])): ?>
-                            <button id="pagePreviewBtn" class="btn secondary" type="button"><?= htmlspecialchars(cms_t('admin.pages.form.preview', 'Podglad')) ?> &#9673;</button>
-                            <?php endif; ?>
-                            <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/pages.php')) ?>"><?= htmlspecialchars(cms_t('admin.pages.form.clear', 'Wyczysc formularz')) ?></a>
-                            <span id="autosaveBadge" class="autosave-badge"></span>
-                        </div>
                     </form>
                 </section>
             </div>
