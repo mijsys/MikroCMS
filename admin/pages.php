@@ -227,6 +227,8 @@ $adminTheme = cms_admin_theme($user);
                                 <button class="btn ghost" type="button" data-builder2-add="container">+ Container</button>
                                 <button class="btn ghost" type="button" data-builder2-add="gallery">+ Gallery</button>
                                 <button class="btn ghost" type="button" data-builder2-add="plugin_slot">+ Plugin Slot</button>
+                                <button class="btn secondary" type="button" id="builderUndoBtn" disabled>Undo</button>
+                                <button class="btn secondary" type="button" id="builderRedoBtn" disabled>Redo</button>
                                 <button class="btn secondary" type="button" id="builderSectionsFocusBtn"><?= htmlspecialchars(cms_t('admin.pages.form.show_sections', 'Pokaz sekcje strony')) ?></button>
                                 <button class="btn secondary" type="button" id="builderExportBtn"><?= htmlspecialchars(cms_t('admin.pages.form.export_json', 'Eksport JSON')) ?></button>
                                 <label class="btn secondary" for="builderImportFile" style="display:inline-flex;align-items:center;cursor:pointer"><?= htmlspecialchars(cms_t('admin.pages.form.import_json', 'Import JSON')) ?></label>

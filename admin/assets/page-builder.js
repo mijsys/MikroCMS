@@ -13,6 +13,9 @@
     }
 
     var initial = Array.isArray(window.CMS_BUILDER_BLOCKS) ? window.CMS_BUILDER_BLOCKS : [];
+    var historyStack = [];
+    var historyIndex = -1;
+    var isApplyingHistory = false;
 
     function esc(v) {
         return String(v || '').replace(/[&<>"']/g, function (ch) {
@@ -279,7 +282,7 @@
         syncContainerRaw(item);
     }
 
-    function sync() {
+    function readPayloadFromDom() {
         var payload = [];
         list.querySelectorAll('.builder-item').forEach(function (item) {
             syncContainerRaw(item);
@@ -294,9 +297,58 @@
             data.layout_h = String(Math.max(1, Math.min(12, parseInt(String(data.layout_h || '2'), 10) || 2)));
             payload.push(data);
         });
+        return payload;
+    }
+
+    function updateHistoryButtons() {
+        var undoBtn = document.getElementById('builderUndoBtn');
+        var redoBtn = document.getElementById('builderRedoBtn');
+        if (undoBtn) {
+            undoBtn.disabled = historyIndex <= 0;
+        }
+        if (redoBtn) {
+            redoBtn.disabled = historyIndex < 0 || historyIndex >= historyStack.length - 1;
+        }
+    }
+
+    function pushHistory(payload) {
+        var snapshot = JSON.stringify(payload);
+        if (historyIndex >= 0 && historyStack[historyIndex] === snapshot) {
+            updateHistoryButtons();
+            return;
+        }
+        if (historyIndex < historyStack.length - 1) {
+            historyStack = historyStack.slice(0, historyIndex + 1);
+        }
+        historyStack.push(snapshot);
+        if (historyStack.length > 80) {
+            historyStack.shift();
+        }
+        historyIndex = historyStack.length - 1;
+        updateHistoryButtons();
+    }
+
+    function loadPayload(payload, opts) {
+        var options = opts || {};
+        list.innerHTML = '';
+        if (Array.isArray(payload)) {
+            payload.forEach(function (item) {
+                list.appendChild(makeItem((item && item.type) || 'text', item));
+            });
+        }
+        renderEmpty();
+        sync(!options.skipHistory);
+    }
+
+    function sync(recordHistory) {
+        var shouldRecordHistory = recordHistory !== false;
+        var payload = readPayloadFromDom();
         hidden.value = JSON.stringify(payload);
         renderCanvas(payload);
         renderLiveContent(payload);
+        if (shouldRecordHistory && !isApplyingHistory) {
+            pushHistory(payload);
+        }
         document.dispatchEvent(new CustomEvent('cms:builder:change'));
     }
 
@@ -526,7 +578,7 @@
         yField.value = String(Math.max(0, Math.min(200, nextY)));
         wField.value = String(Math.max(1, Math.min(12, nextW)));
         hField.value = String(Math.max(1, Math.min(12, nextH)));
-        sync();
+        sync(false);
     }
 
     function canvasCellSize() {
@@ -593,6 +645,7 @@
                 function onUp() {
                     document.removeEventListener('mousemove', onMove);
                     document.removeEventListener('mouseup', onUp);
+                    sync();
                 }
 
                 document.addEventListener('mousemove', onMove);
@@ -621,6 +674,7 @@
                     function onUp() {
                         document.removeEventListener('mousemove', onMove);
                         document.removeEventListener('mouseup', onUp);
+                        sync();
                     }
 
                     document.addEventListener('mousemove', onMove);
@@ -674,7 +728,7 @@
         item.querySelectorAll('[data-field]').forEach(function (field) {
             field.addEventListener('input', function () {
                 updatePreview();
-                sync();
+                sync(false);
             });
             field.addEventListener('change', function () {
                 updatePreview();
@@ -708,12 +762,13 @@
                     var next = Math.max(200, Math.min(1200, startH + (moveEv.clientY - startY)));
                     minHeightField.value = String(next);
                     updatePreview();
-                    sync();
+                    sync(false);
                 }
 
                 function onUp() {
                     document.removeEventListener('mousemove', onMove);
                     document.removeEventListener('mouseup', onUp);
+                    sync();
                 }
 
                 document.addEventListener('mousemove', onMove);
@@ -926,6 +981,64 @@
     renderEmpty();
     sync();
 
+    var undoBtn = document.getElementById('builderUndoBtn');
+    var redoBtn = document.getElementById('builderRedoBtn');
+    if (undoBtn) {
+        undoBtn.addEventListener('click', function () {
+            if (historyIndex <= 0) {
+                return;
+            }
+            historyIndex -= 1;
+            var snapshot = historyStack[historyIndex];
+            var payload = [];
+            try {
+                payload = JSON.parse(snapshot);
+            } catch (e) {
+                payload = [];
+            }
+            isApplyingHistory = true;
+            loadPayload(Array.isArray(payload) ? payload : [], { skipHistory: true });
+            isApplyingHistory = false;
+            updateHistoryButtons();
+        });
+    }
+
+    if (redoBtn) {
+        redoBtn.addEventListener('click', function () {
+            if (historyIndex >= historyStack.length - 1) {
+                return;
+            }
+            historyIndex += 1;
+            var snapshot = historyStack[historyIndex];
+            var payload = [];
+            try {
+                payload = JSON.parse(snapshot);
+            } catch (e) {
+                payload = [];
+            }
+            isApplyingHistory = true;
+            loadPayload(Array.isArray(payload) ? payload : [], { skipHistory: true });
+            isApplyingHistory = false;
+            updateHistoryButtons();
+        });
+    }
+
+    document.addEventListener('keydown', function (e) {
+        var key = String(e.key || '').toLowerCase();
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && key === 'z') {
+            if (undoBtn && !undoBtn.disabled) {
+                e.preventDefault();
+                undoBtn.click();
+            }
+        }
+        if (((e.ctrlKey || e.metaKey) && e.shiftKey && key === 'z') || ((e.ctrlKey || e.metaKey) && key === 'y')) {
+            if (redoBtn && !redoBtn.disabled) {
+                e.preventDefault();
+                redoBtn.click();
+            }
+        }
+    });
+
     if (fallbackContentField) {
         fallbackContentField.addEventListener('input', function () {
             var payload = [];
@@ -954,14 +1067,10 @@
 
     // Expose for draft restore
     window.cmsBuilderLoad = function (blocks) {
-        list.innerHTML = '';
-        if (Array.isArray(blocks)) {
-            blocks.forEach(function (item) {
-                list.appendChild(makeItem(item.type || 'text', item));
-            });
-        }
-        renderEmpty();
-        sync();
+        isApplyingHistory = true;
+        loadPayload(Array.isArray(blocks) ? blocks : [], { skipHistory: true });
+        isApplyingHistory = false;
+        pushHistory(readPayloadFromDom());
     };
 }());
 
