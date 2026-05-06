@@ -352,12 +352,36 @@
         }
         liveContent.innerHTML = '';
 
+        var siteName = String(window.CMS_LIVE_SITE_NAME || 'My CMS');
+        var navItems = Array.isArray(window.CMS_LIVE_NAV_ITEMS) ? window.CMS_LIVE_NAV_ITEMS : [];
+        var enabledPlugins = (window.CMS_LIVE_ENABLED_PLUGINS && typeof window.CMS_LIVE_ENABLED_PLUGINS === 'object')
+            ? window.CMS_LIVE_ENABLED_PLUGINS
+            : {};
+
+        var shell = document.createElement('div');
+        shell.className = 'builder-live-shell';
+        var header = document.createElement('div');
+        header.className = 'builder-live-header';
+        var navHtml = navItems.slice(0, 6).map(function (item, idx) {
+            var title = String((item && item.title) || '').trim() || ('Pozycja ' + (idx + 1));
+            return '<span class="builder-live-nav-item">' + esc(title) + '</span>';
+        }).join('');
+        if (!navHtml) {
+            navHtml = '<span class="builder-live-nav-item">Start</span><span class="builder-live-nav-item">Oferta</span><span class="builder-live-nav-item">Kontakt</span>';
+        }
+        header.innerHTML = '<div class="builder-live-brand">' + esc(siteName) + '</div><div class="builder-live-nav">' + navHtml + '</div>';
+        var main = document.createElement('div');
+        main.className = 'builder-live-main';
+        shell.appendChild(header);
+        shell.appendChild(main);
+        liveContent.appendChild(shell);
+
         if (!Array.isArray(payload) || payload.length === 0) {
             var empty = document.createElement('section');
             empty.className = 'builder-live-section builder-live-empty';
             var fallback = fallbackContentField ? String(fallbackContentField.value || '').trim() : '';
             empty.innerHTML = '<h4>Fallback content</h4><div class="builder-live-text">' + nl2brSafe(fallback ? fallback.slice(0, 1200) : 'Brak blokow i brak tresci fallback.') + '</div>';
-            liveContent.appendChild(empty);
+            main.appendChild(empty);
             return;
         }
 
@@ -423,14 +447,19 @@
             }
 
             if (type === 'plugin_slot') {
-                contentHtml += '<div class="builder-live-plugin-note">Slot pluginu: ' + esc(String(block.plugin_slug || '').trim() || 'brak slug') + '</div>';
+                var pluginSlug = String(block.plugin_slug || '').trim();
+                var pluginName = pluginSlug && enabledPlugins[pluginSlug] ? String(enabledPlugins[pluginSlug]) : '';
+                contentHtml += '<div class="builder-live-plugin-note">Slot pluginu: '
+                    + esc(pluginSlug || 'brak slug')
+                    + (pluginName ? (' (' + esc(pluginName) + ')') : '')
+                    + '</div>';
             }
 
             if (title) {
-                contentHtml += '<h4>' + esc(title) + '</h4>';
+                contentHtml += '<h4 class="builder-live-editable" data-live-edit="title" contenteditable="true" spellcheck="false">' + esc(title) + '</h4>';
             }
             if (String(block.text || '').trim()) {
-                contentHtml += '<div class="builder-live-text">' + nl2brSafe(String(block.text || '').slice(0, 900)) + '</div>';
+                contentHtml += '<div class="builder-live-text builder-live-editable" data-live-edit="text" contenteditable="true" spellcheck="false">' + nl2brSafe(String(block.text || '').slice(0, 900)) + '</div>';
             }
             if (String(block.button_text || '').trim() && String(block.button_url || '').trim()) {
                 contentHtml += '<a class="builder-live-btn" href="' + esc(String(block.button_url || '')) + '" target="_blank" rel="noopener">' + esc(String(block.button_text || '')) + '</a>';
@@ -446,11 +475,38 @@
                 + '</div>'
                 + '<div class="builder-live-inner">' + contentHtml + '</div>';
 
+            section.querySelectorAll('[data-live-edit]').forEach(function (editable) {
+                editable.addEventListener('blur', function () {
+                    var fieldName = editable.getAttribute('data-live-edit');
+                    if (!fieldName) {
+                        return;
+                    }
+                    var targetItem = list.querySelectorAll('.builder-item')[idx];
+                    if (!targetItem) {
+                        return;
+                    }
+                    var targetField = targetItem.querySelector('[data-field="' + fieldName + '"]');
+                    if (!targetField) {
+                        return;
+                    }
+
+                    var nextValue = String(editable.innerText || '').trim();
+                    if (fieldName === 'title') {
+                        nextValue = nextValue.replace(/\s*\n\s*/g, ' ').trim();
+                    }
+                    targetField.value = nextValue;
+                    sync();
+                });
+            });
+
             section.addEventListener('click', function () {
+                if (document.activeElement && section.contains(document.activeElement) && document.activeElement.hasAttribute('data-live-edit')) {
+                    return;
+                }
                 focusEditorItem(idx);
             });
 
-            liveContent.appendChild(section);
+            main.appendChild(section);
         });
     }
 

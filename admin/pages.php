@@ -83,6 +83,21 @@ $parentMap = [];
 foreach ($pages as $pageItem) {
     $parentMap[(int) $pageItem['id']] = $pageItem['title'];
 }
+$liveNavItems = [];
+foreach (array_slice($rootPages, 0, 8) as $navPage) {
+    $liveNavItems[] = [
+        'title' => (string) ($navPage['title'] ?? ''),
+        'slug' => (string) ($navPage['slug'] ?? ''),
+    ];
+}
+$enabledPluginsMap = [];
+foreach (cms_enabled_plugins() as $plugin) {
+    $slug = (string) ($plugin['slug'] ?? '');
+    if ($slug === '') {
+        continue;
+    }
+    $enabledPluginsMap[$slug] = (string) ($plugin['name'] ?? $slug);
+}
 $adminTheme = cms_admin_theme($user);
 ?>
 <!DOCTYPE html>
@@ -334,6 +349,9 @@ $draftKey = 'cms_draft_' . ($editPage ? (int) ($editPage['id'] ?? 0) : 'new') . 
 window.CMS_BUILDER_BLOCKS = <?= json_encode($builderBlocks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 window.CMS_DRAFT_KEY = <?= json_encode($draftKey) ?>;
 window.CMS_PAGE_PREVIEW_URL = <?= json_encode($previewUrl) ?>;
+window.CMS_LIVE_SITE_NAME = <?= json_encode(cms_get_setting('site_name', 'My CMS'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+window.CMS_LIVE_NAV_ITEMS = <?= json_encode($liveNavItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+window.CMS_LIVE_ENABLED_PLUGINS = <?= json_encode($enabledPluginsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
 <script src="<?= htmlspecialchars(cms_url('admin/assets/dashboard.js?v=' . rawurlencode(CMS_CODE_VERSION))) ?>"></script>
 <script src="<?= htmlspecialchars(cms_url('admin/assets/page-builder.js?v=' . rawurlencode(CMS_CODE_VERSION))) ?>"></script>
