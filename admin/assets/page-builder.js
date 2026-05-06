@@ -7,6 +7,7 @@
     var liveContent = document.getElementById('builderLiveContent');
     var liveWrap = liveContent ? liveContent.closest('.builder-live-wrap') : null;
     var liveBreakpoints = document.getElementById('builderLiveBreakpoints');
+    var outlineList = document.getElementById('builderOutlineList');
     var fallbackContentField = document.querySelector('#pageEditorForm [name="content"]');
     if (!list || !hidden) {
         return;
@@ -16,6 +17,8 @@
     var historyStack = [];
     var historyIndex = -1;
     var isApplyingHistory = false;
+    var selectedIndex = -1;
+    var layoutAnchorIndex = -1;
 
     function esc(v) {
         return String(v || '').replace(/[&<>"']/g, function (ch) {
@@ -63,7 +66,10 @@
         item.innerHTML = '' +
             '<div class="builder-head">' +
                 '<div><span class="builder-handle">Przeciagnij</span> <strong>' + esc(String(block.type).toUpperCase()) + '</strong></div>' +
-                    '<button type="button" class="btn danger" data-remove-block>Usun sekcje</button>' +
+                    '<div style="display:inline-flex;gap:8px;align-items:center">' +
+                        '<button type="button" class="btn secondary" data-duplicate-block>Duplikuj</button>' +
+                        '<button type="button" class="btn danger" data-remove-block>Usun sekcje</button>' +
+                    '</div>' +
             '</div>' +
                 '<div class="builder-section-preview" data-section-preview style="height:' + esc(block.min_height) + 'px">' +
                     '<div class="builder-section-overlay">' +
@@ -300,6 +306,367 @@
         return payload;
     }
 
+    function normalizeRect(block) {
+        var x = Math.max(0, Math.min(11, parseInt(String(block.layout_x || '0'), 10) || 0));
+        var y = Math.max(0, Math.min(200, parseInt(String(block.layout_y || '0'), 10) || 0));
+        var w = Math.max(1, Math.min(12, parseInt(String(block.layout_w || '12'), 10) || 12));
+        var h = Math.max(1, Math.min(12, parseInt(String(block.layout_h || '2'), 10) || 2));
+        if (x + w > 12) {
+            w = 12 - x;
+        }
+        return { x: x, y: y, w: w, h: h };
+    }
+
+    function rectsOverlap(a, b) {
+        return a.x < (b.x + b.w)
+            && (a.x + a.w) > b.x
+            && a.y < (b.y + b.h)
+            && (a.y + a.h) > b.y;
+    }
+
+    function autoArrangePayload(payload, anchorIndex) {
+        if (!Array.isArray(payload) || payload.length < 2) {
+            return payload;
+        }
+
+        var arranged = payload.map(function (block) {
+            var rect = normalizeRect(block || {});
+            return Object.assign({}, block || {}, {
+                layout_x: String(rect.x),
+                layout_y: String(rect.y),
+                layout_w: String(rect.w),
+                layout_h: String(rect.h)
+            });
+        });
+
+        var order = arranged.map(function (_, idx) { return idx; });
+        order.sort(function (a, b) {
+            var ra = normalizeRect(arranged[a]);
+            var rb = normalizeRect(arranged[b]);
+            if (ra.y !== rb.y) { return ra.y - rb.y; }
+            return ra.x - rb.x;
+        });
+
+        if (anchorIndex >= 0 && anchorIndex < arranged.length) {
+            order = [anchorIndex].concat(order.filter(function (idx) { return idx !== anchorIndex; }));
+        }
+
+        var placed = [];
+        order.forEach(function (idx) {
+            var rect = normalizeRect(arranged[idx]);
+            var guard = 0;
+            while (guard < 500) {
+                var collides = placed.some(function (one) { return rectsOverlap(rect, one); });
+                if (!collides) {
+                    break;
+                }
+                rect.y += 1;
+                if (rect.y > 200) {
+                    rect.y = 200;
+                    break;
+                }
+                guard += 1;
+            }
+            arranged[idx].layout_x = String(rect.x);
+            arranged[idx].layout_y = String(rect.y);
+            arranged[idx].layout_w = String(rect.w);
+            arranged[idx].layout_h = String(rect.h);
+            placed.push(rect);
+        });
+
+        return arranged;
+    }
+
+    function payloadLayoutChanged(a, b) {
+        if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+            return true;
+        }
+        for (var i = 0; i < a.length; i += 1) {
+            var aa = a[i] || {};
+            var bb = b[i] || {};
+            if (String(aa.layout_x || '') !== String(bb.layout_x || '')
+                || String(aa.layout_y || '') !== String(bb.layout_y || '')
+                || String(aa.layout_w || '') !== String(bb.layout_w || '')
+                || String(aa.layout_h || '') !== String(bb.layout_h || '')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function syncLayoutFieldsFromPayload(payload) {
+        if (!Array.isArray(payload)) {
+            return;
+        }
+        var items = list.querySelectorAll('.builder-item');
+        payload.forEach(function (block, idx) {
+            var item = items[idx];
+            if (!item) {
+                return;
+            }
+            var xField = item.querySelector('[data-field="layout_x"]');
+            var yField = item.querySelector('[data-field="layout_y"]');
+            var wField = item.querySelector('[data-field="layout_w"]');
+            var hField = item.querySelector('[data-field="layout_h"]');
+            if (!xField || !yField || !wField || !hField) {
+                return;
+            }
+            xField.value = String(block.layout_x || '0');
+            yField.value = String(block.layout_y || '0');
+            wField.value = String(block.layout_w || '12');
+            hField.value = String(block.layout_h || '2');
+        });
+    }
+
+    function moveEditorItem(index, direction) {
+        var items = list.querySelectorAll('.builder-item');
+        if (!items.length || index < 0 || index >= items.length) {
+            return;
+        }
+        var toIndex = index + direction;
+        if (toIndex < 0 || toIndex >= items.length) {
+            return;
+        }
+
+        var current = items[index];
+        var target = items[toIndex];
+        if (!current || !target) {
+            return;
+        }
+
+        if (direction < 0) {
+            list.insertBefore(current, target);
+        } else {
+            list.insertBefore(target, current);
+        }
+        sync();
+        setSelectedIndex(toIndex);
+    }
+
+    function duplicateEditorItem(index) {
+        var items = list.querySelectorAll('.builder-item');
+        if (!items.length || index < 0 || index >= items.length) {
+            return;
+        }
+        var payload = readPayloadFromDom();
+        if (!Array.isArray(payload) || !payload[index]) {
+            return;
+        }
+
+        var source = payload[index];
+        var rect = normalizeRect(source);
+        var clone = Object.assign({}, source, {
+            title: String(source.title || '').trim() ? String(source.title) + ' (kopia)' : 'Sekcja (kopia)',
+            layout_x: String(rect.x),
+            layout_y: String(Math.min(200, rect.y + 1)),
+            layout_w: String(rect.w),
+            layout_h: String(rect.h)
+        });
+
+        var node = makeItem(clone.type || 'text', clone);
+        var insertAfter = items[index];
+        if (insertAfter && insertAfter.nextSibling) {
+            list.insertBefore(node, insertAfter.nextSibling);
+        } else {
+            list.appendChild(node);
+        }
+        renderEmpty();
+        layoutAnchorIndex = index + 1;
+        sync();
+        setSelectedIndex(index + 1);
+    }
+
+    function setSelectedIndex(index) {
+        selectedIndex = typeof index === 'number' ? index : -1;
+
+        list.querySelectorAll('.builder-item').forEach(function (item, idx) {
+            item.classList.toggle('builder-item-selected', idx === selectedIndex);
+        });
+
+        if (canvas) {
+            canvas.querySelectorAll('.builder-canvas-item').forEach(function (card) {
+                var idx = parseInt(String(card.getAttribute('data-canvas-index') || '-1'), 10);
+                card.classList.toggle('selected', idx === selectedIndex);
+            });
+        }
+
+        if (outlineList) {
+            outlineList.querySelectorAll('.builder-outline-item').forEach(function (row) {
+                var idx = parseInt(String(row.getAttribute('data-outline-index') || '-1'), 10);
+                row.classList.toggle('selected', idx === selectedIndex);
+            });
+        }
+
+        if (liveContent) {
+            liveContent.querySelectorAll('.builder-live-section').forEach(function (section) {
+                var idx = parseInt(String(section.getAttribute('data-live-index') || '-1'), 10);
+                section.classList.toggle('selected', idx === selectedIndex);
+            });
+        }
+    }
+
+    function renderOutline(payload) {
+        if (!outlineList) {
+            return;
+        }
+        outlineList.innerHTML = '';
+
+        if (!Array.isArray(payload) || payload.length === 0) {
+            var empty = document.createElement('div');
+            empty.className = 'builder-empty';
+            empty.textContent = 'Brak sekcji do pokazania w outline.';
+            outlineList.appendChild(empty);
+            return;
+        }
+
+        var ordered = payload.map(function (block, idx) {
+            var rect = normalizeRect(block || {});
+            return { idx: idx, block: block || {}, rect: rect };
+        }).sort(function (a, b) {
+            if (a.rect.y !== b.rect.y) { return a.rect.y - b.rect.y; }
+            return a.rect.x - b.rect.x;
+        });
+
+        ordered.forEach(function (entry) {
+            var row = document.createElement('div');
+            row.className = 'builder-outline-item';
+            row.setAttribute('data-outline-index', String(entry.idx));
+            row.innerHTML = ''
+                + '<button type="button" class="builder-outline-main">'
+                + '<strong>#' + (entry.idx + 1) + ' ' + esc(String(entry.block.title || '').trim() || 'Sekcja bez tytulu') + '</strong>'
+                + '<span>' + esc(String(entry.block.type || 'text').toUpperCase()) + ' · x' + entry.rect.x + ' y' + entry.rect.y + ' w' + entry.rect.w + ' h' + entry.rect.h + '</span>'
+                + '</button>'
+                + '<div class="builder-outline-actions">'
+                + '<button type="button" class="btn ghost" data-outline-action="duplicate">⧉</button>'
+                + '<button type="button" class="btn ghost" data-outline-move="up">↑</button>'
+                + '<button type="button" class="btn ghost" data-outline-move="down">↓</button>'
+                + '</div>';
+
+            var mainBtn = row.querySelector('.builder-outline-main');
+            if (mainBtn) {
+                mainBtn.addEventListener('click', function () {
+                    setSelectedIndex(entry.idx);
+                    focusEditorItem(entry.idx);
+                });
+            }
+
+            row.querySelectorAll('[data-outline-move]').forEach(function (btn) {
+                btn.addEventListener('click', function (ev) {
+                    ev.stopPropagation();
+                    var dir = btn.getAttribute('data-outline-move') === 'up' ? -1 : 1;
+                    moveEditorItem(entry.idx, dir);
+                });
+            });
+
+            row.querySelectorAll('[data-outline-action="duplicate"]').forEach(function (btn) {
+                btn.addEventListener('click', function (ev) {
+                    ev.stopPropagation();
+                    duplicateEditorItem(entry.idx);
+                });
+            });
+
+            outlineList.appendChild(row);
+        });
+
+        setSelectedIndex(selectedIndex);
+    }
+
+    function nextPresetStartY() {
+        var payload = readPayloadFromDom();
+        if (!Array.isArray(payload) || payload.length === 0) {
+            return 0;
+        }
+        var end = 0;
+        payload.forEach(function (block) {
+            var rect = normalizeRect(block || {});
+            end = Math.max(end, rect.y + rect.h);
+        });
+        return Math.min(200, end + 1);
+    }
+
+    function presetBlocks(preset) {
+        var startY = nextPresetStartY();
+        if (preset === 'hero') {
+            return [
+                {
+                    type: 'hero',
+                    title: 'Mocny naglowek strony',
+                    text: 'Krotki opis wartosci oraz CTA prowadzace do konwersji.',
+                    button_text: 'Zobacz wiecej',
+                    button_url: '#oferta',
+                    background_color: '#eef6ff',
+                    align: 'left',
+                    layout_x: '0',
+                    layout_y: String(startY),
+                    layout_w: '12',
+                    layout_h: '3'
+                }
+            ];
+        }
+        if (preset === 'faq') {
+            return [
+                {
+                    type: 'container',
+                    title: 'Najczestsze pytania',
+                    text: 'Sekcja FAQ z kluczowymi odpowiedziami dla klientow.',
+                    container_columns: '1',
+                    container_items_json: '[{"title":"Jak dlugo trwa wdrozenie?","text":"Standardowo od 3 do 7 dni roboczych."},{"title":"Czy moge samodzielnie edytowac tresc?","text":"Tak, wszystkie sekcje sa edytowalne w builderze."}]',
+                    layout_x: '0',
+                    layout_y: String(startY),
+                    layout_w: '12',
+                    layout_h: '3'
+                }
+            ];
+        }
+        if (preset === 'cta') {
+            return [
+                {
+                    type: 'hero',
+                    title: 'Gotowy na start projektu?',
+                    text: 'Skontaktuj sie z nami i odbierz darmowa konsultacje.',
+                    button_text: 'Umow rozmowe',
+                    button_url: '#kontakt',
+                    background_color: '#f2f7ff',
+                    align: 'center',
+                    layout_x: '0',
+                    layout_y: String(startY),
+                    layout_w: '12',
+                    layout_h: '3'
+                }
+            ];
+        }
+        if (preset === 'pricing') {
+            return [
+                {
+                    type: 'container',
+                    title: 'Pakiety cenowe',
+                    text: 'Wybierz plan dopasowany do etapu rozwoju Twojej firmy.',
+                    container_columns: '3',
+                    container_items_json: '[{"title":"Start","text":"Od 199 zl / miesiac"},{"title":"Pro","text":"Od 499 zl / miesiac"},{"title":"Enterprise","text":"Wycena indywidualna"}]',
+                    layout_x: '0',
+                    layout_y: String(startY),
+                    layout_w: '12',
+                    layout_h: '4'
+                }
+            ];
+        }
+        if (preset === 'gallery') {
+            return [
+                {
+                    type: 'gallery',
+                    title: 'Galeria realizacji',
+                    text: 'Wybierz najlepsze kadry i pokaz efekt koncowy projektu.',
+                    gallery_urls: 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4\nhttps://images.unsplash.com/photo-1505693416388-ac5ce068fe85\nhttps://images.unsplash.com/photo-1493666438817-866a91353ca9',
+                    layout_x: '0',
+                    layout_y: String(startY),
+                    layout_w: '12',
+                    layout_h: '3'
+                }
+            ];
+        }
+        return [];
+    }
+
     function updateHistoryButtons() {
         var undoBtn = document.getElementById('builderUndoBtn');
         var redoBtn = document.getElementById('builderRedoBtn');
@@ -338,14 +705,27 @@
         }
         renderEmpty();
         sync(!options.skipHistory);
+        setSelectedIndex(-1);
     }
 
     function sync(recordHistory) {
         var shouldRecordHistory = recordHistory !== false;
         var payload = readPayloadFromDom();
+        var resolved = autoArrangePayload(payload, layoutAnchorIndex);
+        layoutAnchorIndex = -1;
+
+        if (payloadLayoutChanged(payload, resolved)) {
+            syncLayoutFieldsFromPayload(resolved);
+            payload = resolved;
+        } else {
+            payload = resolved;
+        }
+
         hidden.value = JSON.stringify(payload);
         renderCanvas(payload);
+        renderOutline(payload);
         renderLiveContent(payload);
+        setSelectedIndex(selectedIndex);
         if (shouldRecordHistory && !isApplyingHistory) {
             pushHistory(payload);
         }
@@ -375,6 +755,7 @@
         if (!target) {
             return;
         }
+        setSelectedIndex(index);
         target.scrollIntoView({ behavior: 'smooth', block: 'center' });
         target.classList.add('builder-item-focus');
         setTimeout(function () {
@@ -578,6 +959,8 @@
         yField.value = String(Math.max(0, Math.min(200, nextY)));
         wField.value = String(Math.max(1, Math.min(12, nextW)));
         hField.value = String(Math.max(1, Math.min(12, nextH)));
+        layoutAnchorIndex = index;
+        setSelectedIndex(index);
         sync(false);
     }
 
@@ -619,6 +1002,9 @@
             var card = document.createElement('div');
             card.className = 'builder-canvas-item';
             card.setAttribute('data-canvas-index', String(idx));
+            if (idx === selectedIndex) {
+                card.classList.add('selected');
+            }
             card.style.gridColumn = (x + 1) + ' / span ' + w;
             card.style.gridRow = (y + 1) + ' / span ' + h;
             card.innerHTML = '<strong>' + esc(block.title || ('Sekcja ' + (idx + 1))) + '</strong><span>' + esc(String(block.type || 'text').toUpperCase()) + ' • x' + x + ' y' + y + ' w' + w + ' h' + h + '</span><i class="builder-canvas-resize" title="Przeciagnij aby zmienic rozmiar"></i>';
@@ -628,6 +1014,7 @@
                     return;
                 }
                 ev.preventDefault();
+                setSelectedIndex(idx);
                 var size = canvasCellSize();
                 var startMouseX = ev.clientX;
                 var startMouseY = ev.clientY;
@@ -657,6 +1044,7 @@
                 resizeHandle.addEventListener('mousedown', function (ev) {
                     ev.preventDefault();
                     ev.stopPropagation();
+                    setSelectedIndex(idx);
                     var size = canvasCellSize();
                     var startMouseX = ev.clientX;
                     var startMouseY = ev.clientY;
@@ -739,7 +1127,27 @@
         item.querySelector('[data-remove-block]').addEventListener('click', function () {
             item.remove();
             renderEmpty();
+            selectedIndex = -1;
             sync();
+        });
+
+        var duplicateBtn = item.querySelector('[data-duplicate-block]');
+        if (duplicateBtn) {
+            duplicateBtn.addEventListener('click', function () {
+                var all = Array.prototype.slice.call(list.querySelectorAll('.builder-item'));
+                var idx = all.indexOf(item);
+                if (idx >= 0) {
+                    duplicateEditorItem(idx);
+                }
+            });
+        }
+
+        item.addEventListener('click', function () {
+            var all = Array.prototype.slice.call(list.querySelectorAll('.builder-item'));
+            var idx = all.indexOf(item);
+            if (idx >= 0) {
+                setSelectedIndex(idx);
+            }
         });
 
         item.addEventListener('dragstart', function () {
@@ -878,6 +1286,22 @@
             btn.classList.remove('toolbar-dragging');
             removePlaceholder();
             dragNewType = null;
+        });
+    });
+
+    document.querySelectorAll('[data-builder2-preset]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var preset = btn.getAttribute('data-builder2-preset') || '';
+            var blocks = presetBlocks(preset);
+            if (!blocks.length) {
+                return;
+            }
+            blocks.forEach(function (block) {
+                list.appendChild(makeItem(block.type || 'text', block));
+            });
+            renderEmpty();
+            sync();
+            setSelectedIndex(list.querySelectorAll('.builder-item').length - 1);
         });
     });
 

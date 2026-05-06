@@ -227,6 +227,12 @@ $adminTheme = cms_admin_theme($user);
                                 <button class="btn ghost" type="button" data-builder2-add="container">+ Container</button>
                                 <button class="btn ghost" type="button" data-builder2-add="gallery">+ Gallery</button>
                                 <button class="btn ghost" type="button" data-builder2-add="plugin_slot">+ Plugin Slot</button>
+                                <span class="builder-toolbar-separator" aria-hidden="true"></span>
+                                <button class="btn secondary" type="button" data-builder2-preset="hero">Preset: Hero</button>
+                                <button class="btn secondary" type="button" data-builder2-preset="faq">Preset: FAQ</button>
+                                <button class="btn secondary" type="button" data-builder2-preset="cta">Preset: CTA</button>
+                                <button class="btn secondary" type="button" data-builder2-preset="gallery">Preset: Gallery</button>
+                                <button class="btn secondary" type="button" data-builder2-preset="pricing">Preset: Pricing</button>
                                 <button class="btn secondary" type="button" id="builderUndoBtn" disabled>Undo</button>
                                 <button class="btn secondary" type="button" id="builderRedoBtn" disabled>Redo</button>
                                 <button class="btn secondary" type="button" id="builderSectionsFocusBtn"><?= htmlspecialchars(cms_t('admin.pages.form.show_sections', 'Pokaz sekcje strony')) ?></button>
@@ -249,8 +255,19 @@ $adminTheme = cms_admin_theme($user);
                                 </div>
                                 <div id="builderLiveContent" class="builder-live-content"></div>
                             </div>
-                            <div id="builderEmptyV2" class="builder-empty"><?= htmlspecialchars(cms_t('admin.pages.form.builder_empty', 'Builder jest pusty. Dodaj pierwszy blok.')) ?></div>
-                            <div id="builderListV2" class="builder-list"></div>
+                            <div class="builder-editor-grid">
+                                <aside class="builder-outline-wrap">
+                                    <div class="builder-outline-head">
+                                        <strong>Outline sekcji</strong>
+                                        <span class="tiny">Kliknij sekcje, aby podswietlic ja na canvasie i liscie</span>
+                                    </div>
+                                    <div id="builderOutlineList" class="builder-outline-list"></div>
+                                </aside>
+                                <div class="builder-editor-main">
+                                    <div id="builderEmptyV2" class="builder-empty"><?= htmlspecialchars(cms_t('admin.pages.form.builder_empty', 'Builder jest pusty. Dodaj pierwszy blok.')) ?></div>
+                                    <div id="builderListV2" class="builder-list"></div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="actions" style="margin-top:18px;align-items:center;flex-wrap:wrap">
