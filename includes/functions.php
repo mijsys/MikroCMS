@@ -667,30 +667,31 @@ function cms_get_theme_css(): string
 
 function cms_builder_block_defaults(string $type = 'text'): array
 {
-    return [
-        'type' => $type,
-        'title' => '',
-        'text' => '',
-        'background_color' => '#ffffff',
-        'background_image' => '',
-        'background_attachment' => 'scroll',
-        'min_height' => '420',
-        'align' => 'left',
-        'button_text' => '',
-        'button_url' => '',
-        'image_url' => '',
-        'image_alt' => '',
-        'gallery_urls' => '',
-        'container_columns' => '2',
-        'container_items_json' => "[\n  {\"title\":\"Karta 1\",\"text\":\"Opis elementu\"},\n  {\"title\":\"Karta 2\",\"text\":\"Opis elementu\"}\n]",
-        'plugin_slug' => '',
-        'section_theme' => 'default',
-        'typography_scale' => 'md',
-        'layout_x' => '0',
-        'layout_y' => '0',
-        'layout_w' => '12',
-        'layout_h' => '2',
+    $common = [
+        'type'         => $type,
+        'display'      => 'block',
+        'order'        => 0,
+        'link_url'     => '',
+        'link_target'  => '_self',
+        'padding_y'    => '20',
+        'padding_x'    => '0',
+        'bg_color'     => '',
+        'width'        => '100',
+        'align'        => 'left',
+        'float_x'      => '0',
+        'float_y'      => '0',
     ];
+    $byType = [
+        'heading' => ['heading_text' => 'Nagłówek', 'heading_level' => 'h2', 'heading_color' => '#111111', 'heading_size' => ''],
+        'text'    => ['text_content' => 'Wpisz tekst...', 'text_size' => '16', 'text_color' => '#333333', 'text_bold' => '0', 'text_italic' => '0'],
+        'image'   => ['image_src' => '', 'image_alt' => '', 'image_width' => '100', 'image_border_radius' => '0', 'image_link' => ''],
+        'button'  => ['btn_label' => 'Przycisk', 'btn_url' => '#', 'btn_target' => '_self', 'btn_style' => 'primary', 'btn_size' => 'md', 'btn_full_width' => '0'],
+        'hero'    => ['hero_title' => 'Nagłówek hero', 'hero_subtitle' => '', 'hero_bg_color' => '#1a2942', 'hero_bg_image' => '', 'hero_text_color' => '#ffffff', 'hero_btn_text' => '', 'hero_btn_url' => '#', 'hero_min_height' => '400', 'hero_text_align' => 'center'],
+        'divider' => ['div_color' => '#e2e8f0', 'div_thickness' => '1', 'div_style' => 'solid', 'div_width' => '100'],
+        'spacer'  => ['spacer_height' => '40'],
+        'html'    => ['html_content' => ''],
+    ];
+    return array_merge($common, $byType[$type] ?? []);
 }
 
 function cms_normalize_builder_blocks(mixed $input): array
@@ -701,74 +702,186 @@ function cms_normalize_builder_blocks(mixed $input): array
     if (!is_array($input)) {
         return [];
     }
+    $validTypes = ['heading', 'text', 'image', 'button', 'hero', 'divider', 'spacer', 'html'];
+    $legacyMap  = ['container' => 'text', 'gallery' => 'text', 'plugin_slot' => 'text'];
 
     $blocks = [];
-    foreach ($input as $item) {
-        if (!is_array($item)) {
-            continue;
+    foreach ($input as $idx => $item) {
+        if (!is_array($item)) { continue; }
+        $type = (string) ($item['type'] ?? 'text');
+        if (!in_array($type, $validTypes, true)) {
+            $type = $legacyMap[$type] ?? 'text';
         }
-        $type = in_array(($item['type'] ?? 'text'), ['hero', 'text', 'image', 'container', 'gallery', 'plugin_slot'], true) ? $item['type'] : 'text';
-        $block = cms_builder_block_defaults($type);
-        $block['title'] = trim((string) ($item['title'] ?? ''));
-        $block['text'] = trim((string) ($item['text'] ?? ''));
-        $block['background_color'] = cms_sanitize_hex((string) ($item['background_color'] ?? '#ffffff'), '#ffffff');
-        $block['background_image'] = cms_sanitize_url_value((string) ($item['background_image'] ?? ''));
-        $block['background_attachment'] = (($item['background_attachment'] ?? 'scroll') === 'fixed') ? 'fixed' : 'scroll';
-        $block['min_height'] = (string) max(200, min(1200, (int) ($item['min_height'] ?? 420)));
-        $block['align'] = in_array(($item['align'] ?? 'left'), ['left', 'center', 'right'], true) ? $item['align'] : 'left';
-        $block['button_text'] = trim((string) ($item['button_text'] ?? ''));
-        $block['button_url'] = cms_sanitize_url_value((string) ($item['button_url'] ?? ''));
-        $block['image_url'] = cms_sanitize_url_value((string) ($item['image_url'] ?? ''));
-        $block['image_alt'] = trim((string) ($item['image_alt'] ?? ''));
-
-        $galleryRaw = preg_split('/\r\n|\r|\n/', (string) ($item['gallery_urls'] ?? '')) ?: [];
-        $gallerySanitized = [];
-        foreach ($galleryRaw as $url) {
-            $clean = cms_sanitize_url_value((string) $url);
-            if ($clean !== '') {
-                $gallerySanitized[] = $clean;
+        $defaults = cms_builder_block_defaults($type);
+        $block = $defaults;
+        foreach ($defaults as $k => $v) {
+            if (array_key_exists($k, $item) && $item[$k] !== null) {
+                $block[$k] = $item[$k];
             }
         }
-        $block['gallery_urls'] = implode("\n", $gallerySanitized);
+        // Legacy field migrations
+        if ($type === 'image'   && $block['image_src']    === '' && !empty($item['image_url']))  { $block['image_src']    = (string) $item['image_url']; }
+        if ($type === 'heading' && $block['heading_text'] === '' && !empty($item['title']))       { $block['heading_text'] = trim((string) $item['title']); }
+        if ($type === 'hero'    && $block['hero_title']   === '' && !empty($item['title']))       { $block['hero_title']   = trim((string) $item['title']); }
 
-        $columns = (int) ($item['container_columns'] ?? 2);
-        $block['container_columns'] = (string) max(1, min(4, $columns));
+        $block['type']         = $type;
+        $block['display']      = in_array($block['display'], ['block', 'float'], true) ? $block['display'] : 'block';
+        $block['order']        = (int) ($item['order'] ?? $idx);
+        $block['link_target']  = in_array($block['link_target'], ['_self', '_blank'], true) ? $block['link_target'] : '_self';
+        $block['padding_y']    = (string) max(0, min(200, (int) $block['padding_y']));
+        $block['padding_x']    = (string) max(0, min(200, (int) $block['padding_x']));
+        $block['width']        = (string) max(10, min(100, (int) $block['width']));
+        $block['float_x']      = (string) max(0, min(90, (int) $block['float_x']));
+        $block['float_y']      = (string) max(0, (int) $block['float_y']);
+        $block['link_url']     = cms_sanitize_url_value((string) $block['link_url']);
+        $block['bg_color']     = $block['bg_color'] !== '' ? cms_sanitize_hex((string) $block['bg_color'], '') : '';
+        $block['align']        = in_array($block['align'], ['left', 'center', 'right'], true) ? $block['align'] : 'left';
 
-        $containerItemsRaw = (string) ($item['container_items_json'] ?? '[]');
-        $containerItems = json_decode($containerItemsRaw, true);
-        if (!is_array($containerItems)) {
-            $containerItems = [];
+        if ($type === 'heading') {
+            $block['heading_level'] = in_array($block['heading_level'], ['h1','h2','h3','h4','h5','h6'], true) ? $block['heading_level'] : 'h2';
+            $block['heading_color'] = cms_sanitize_hex((string) $block['heading_color'], '#111111');
+        } elseif ($type === 'text') {
+            $block['text_size']   = (string) max(10, min(120, (int) $block['text_size']));
+            $block['text_color']  = cms_sanitize_hex((string) $block['text_color'], '#333333');
+            $block['text_bold']   = $block['text_bold']   === '1' ? '1' : '0';
+            $block['text_italic'] = $block['text_italic'] === '1' ? '1' : '0';
+        } elseif ($type === 'image') {
+            $block['image_src']           = cms_sanitize_url_value((string) $block['image_src']);
+            $block['image_width']         = (string) max(10, min(100, (int) $block['image_width']));
+            $block['image_border_radius'] = (string) max(0, min(200, (int) $block['image_border_radius']));
+            $block['image_link']          = cms_sanitize_url_value((string) $block['image_link']);
+        } elseif ($type === 'button') {
+            $block['btn_url']        = cms_sanitize_url_value((string) $block['btn_url']);
+            $block['btn_target']     = in_array($block['btn_target'], ['_self', '_blank'], true) ? $block['btn_target'] : '_self';
+            $block['btn_style']      = in_array($block['btn_style'], ['primary','secondary','outline','danger','success'], true) ? $block['btn_style'] : 'primary';
+            $block['btn_size']       = in_array($block['btn_size'], ['sm','md','lg'], true) ? $block['btn_size'] : 'md';
+            $block['btn_full_width'] = $block['btn_full_width'] === '1' ? '1' : '0';
+        } elseif ($type === 'hero') {
+            $block['hero_bg_color']   = cms_sanitize_hex((string) $block['hero_bg_color'], '#1a2942');
+            $block['hero_text_color'] = cms_sanitize_hex((string) $block['hero_text_color'], '#ffffff');
+            $block['hero_min_height'] = (string) max(100, min(1200, (int) $block['hero_min_height']));
+            $block['hero_text_align'] = in_array($block['hero_text_align'], ['left','center','right'], true) ? $block['hero_text_align'] : 'center';
+            $block['hero_bg_image']   = cms_sanitize_url_value((string) $block['hero_bg_image']);
+            $block['hero_btn_url']    = cms_sanitize_url_value((string) $block['hero_btn_url']);
+        } elseif ($type === 'divider') {
+            $block['div_color']     = cms_sanitize_hex((string) $block['div_color'], '#e2e8f0');
+            $block['div_thickness'] = (string) max(1, min(20, (int) $block['div_thickness']));
+            $block['div_style']     = in_array($block['div_style'], ['solid','dashed','dotted'], true) ? $block['div_style'] : 'solid';
+            $block['div_width']     = (string) max(10, min(100, (int) $block['div_width']));
+        } elseif ($type === 'spacer') {
+            $block['spacer_height'] = (string) max(4, min(400, (int) $block['spacer_height']));
         }
-        $normalizedItems = [];
-        foreach ($containerItems as $containerItem) {
-            if (!is_array($containerItem)) {
-                continue;
-            }
-            $normalizedItems[] = [
-                'title' => trim((string) ($containerItem['title'] ?? '')),
-                'text' => trim((string) ($containerItem['text'] ?? '')),
-                'image' => cms_sanitize_url_value((string) ($containerItem['image'] ?? '')),
-                'button_text' => trim((string) ($containerItem['button_text'] ?? '')),
-                'button_url' => cms_sanitize_url_value((string) ($containerItem['button_url'] ?? '')),
-            ];
-        }
-        $block['container_items_json'] = json_encode($normalizedItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $pluginSlug = trim((string) ($item['plugin_slug'] ?? ''));
-        $block['plugin_slug'] = preg_match('/^[a-z0-9\-]+$/', $pluginSlug) ? $pluginSlug : '';
-        $sectionTheme = trim((string) ($item['section_theme'] ?? 'default'));
-        $allowedThemes = ['default', 'ocean', 'sunset', 'forest', 'mono'];
-        $block['section_theme'] = in_array($sectionTheme, $allowedThemes, true) ? $sectionTheme : 'default';
-        $typographyScale = trim((string) ($item['typography_scale'] ?? 'md'));
-        $allowedScales = ['sm', 'md', 'lg', 'xl'];
-        $block['typography_scale'] = in_array($typographyScale, $allowedScales, true) ? $typographyScale : 'md';
-        $block['layout_x'] = (string) max(0, min(11, (int) ($item['layout_x'] ?? 0)));
-        $block['layout_y'] = (string) max(0, min(200, (int) ($item['layout_y'] ?? 0)));
-        $block['layout_w'] = (string) max(1, min(12, (int) ($item['layout_w'] ?? 12)));
-        $block['layout_h'] = (string) max(1, min(12, (int) ($item['layout_h'] ?? 2)));
         $blocks[] = $block;
     }
-
+    usort($blocks, static fn(array $a, array $b): int => (int) $a['order'] - (int) $b['order']);
     return $blocks;
+}
+
+function cms_render_single_block(array $block, bool $isFloat = false): string
+{
+    $type    = (string) ($block['type'] ?? 'text');
+    $padY    = max(0, (int) ($block['padding_y'] ?? 20));
+    $padX    = max(0, (int) ($block['padding_x'] ?? 0));
+    $bgColor = (string) ($block['bg_color'] ?? '');
+    $align   = in_array($block['align'] ?? 'left', ['left','center','right'], true) ? $block['align'] : 'left';
+    $width   = max(10, min(100, (int) ($block['width'] ?? 100)));
+    $linkUrl = trim((string) ($block['link_url'] ?? ''));
+    $linkTgt = ($block['link_target'] ?? '_self') === '_blank' ? '_blank' : '_self';
+
+    $wrapStyle = 'padding:' . $padY . 'px ' . $padX . 'px';
+    if ($bgColor !== '') { $wrapStyle .= ';background:' . htmlspecialchars($bgColor, ENT_QUOTES); }
+    if ($isFloat) {
+        $fx = max(0, min(90, (int) ($block['float_x'] ?? 0)));
+        $fy = max(0, (int) ($block['float_y'] ?? 0));
+        $wrapStyle .= ';position:absolute;left:' . $fx . '%;top:' . $fy . 'px;z-index:10';
+    } elseif ($width < 100) {
+        $wrapStyle .= ';width:' . $width . '%';
+    }
+
+    $inner = '';
+    if ($type === 'heading') {
+        $lvl   = in_array($block['heading_level'] ?? 'h2', ['h1','h2','h3','h4','h5','h6'], true) ? $block['heading_level'] : 'h2';
+        $szMap = ['h1' => '2.5rem', 'h2' => '2rem', 'h3' => '1.5rem', 'h4' => '1.25rem', 'h5' => '1rem', 'h6' => '0.875rem'];
+        $sz    = !empty($block['heading_size']) ? ((int) $block['heading_size'] . 'px') : ($szMap[$lvl] ?? '2rem');
+        $clr   = htmlspecialchars((string) ($block['heading_color'] ?? '#111111'), ENT_QUOTES);
+        $txt   = htmlspecialchars((string) ($block['heading_text'] ?? 'Nagłówek'));
+        $inner = '<' . $lvl . ' class="cms-block-heading" style="font-size:' . $sz . ';color:' . $clr . ';text-align:' . $align . ';margin:0;line-height:1.25;font-weight:800">' . $txt . '</' . $lvl . '>';
+    } elseif ($type === 'text') {
+        $sz  = max(10, (int) ($block['text_size'] ?? 16));
+        $clr = htmlspecialchars((string) ($block['text_color'] ?? '#333'), ENT_QUOTES);
+        $css = 'font-size:' . $sz . 'px;color:' . $clr . ';text-align:' . $align . ';margin:0;line-height:1.6';
+        if (($block['text_bold'] ?? '0') === '1')   { $css .= ';font-weight:700'; }
+        if (($block['text_italic'] ?? '0') === '1') { $css .= ';font-style:italic'; }
+        $inner = '<p class="cms-block-text" style="' . $css . '">' . nl2br(htmlspecialchars((string) ($block['text_content'] ?? ''))) . '</p>';
+    } elseif ($type === 'image') {
+        $src = (string) ($block['image_src'] ?? '');
+        if ($src !== '') {
+            $iw  = max(10, min(100, (int) ($block['image_width'] ?? 100)));
+            $rad = max(0, (int) ($block['image_border_radius'] ?? 0));
+            $ims = 'width:' . $iw . '%;max-width:100%;border-radius:' . $rad . 'px;display:block';
+            if ($align === 'center') { $ims .= ';margin:0 auto'; }
+            elseif ($align === 'right') { $ims .= ';margin-left:auto;margin-right:0'; }
+            $img   = '<img src="' . htmlspecialchars($src, ENT_QUOTES) . '" alt="' . htmlspecialchars((string) ($block['image_alt'] ?? ''), ENT_QUOTES) . '" class="cms-block-image" style="' . $ims . '">';
+            $ilink = (string) ($block['image_link'] ?? '');
+            $inner = $ilink !== '' ? '<a href="' . htmlspecialchars($ilink, ENT_QUOTES) . '" target="_blank" rel="noopener noreferrer">' . $img . '</a>' : $img;
+        }
+    } elseif ($type === 'button') {
+        $bStyle = (string) ($block['btn_style'] ?? 'primary');
+        $bSize  = (string) ($block['btn_size']  ?? 'md');
+        $bgM    = ['primary' => '#2563eb', 'secondary' => '#475569', 'outline' => 'transparent', 'danger' => '#dc2626', 'success' => '#16a34a'];
+        $txM    = ['primary' => '#fff', 'secondary' => '#fff', 'outline' => '#2563eb', 'danger' => '#fff', 'success' => '#fff'];
+        $bdM    = ['primary' => '#2563eb', 'secondary' => '#475569', 'outline' => '#2563eb', 'danger' => '#dc2626', 'success' => '#16a34a'];
+        $szM    = ['sm' => '8px 18px', 'md' => '11px 28px', 'lg' => '15px 40px'];
+        $szFM   = ['sm' => '13px', 'md' => '15px', 'lg' => '18px'];
+        $css    = 'padding:' . ($szM[$bSize] ?? $szM['md']) . ';font-size:' . ($szFM[$bSize] ?? '15px') . ';background:' . ($bgM[$bStyle] ?? '#2563eb') . ';color:' . ($txM[$bStyle] ?? '#fff') . ';border:2px solid ' . ($bdM[$bStyle] ?? '#2563eb') . ';border-radius:8px;font-weight:700;text-decoration:none;display:inline-block';
+        if (($block['btn_full_width'] ?? '0') === '1') { $css .= ';display:block;text-align:center;width:100%;box-sizing:border-box'; }
+        $aw    = match($align) { 'center' => ';text-align:center', 'right' => ';text-align:right', default => '' };
+        $tgt   = ($block['btn_target'] ?? '_self') === '_blank' ? '_blank' : '_self';
+        $rel   = $tgt === '_blank' ? ' rel="noopener noreferrer"' : '';
+        $label = htmlspecialchars((string) ($block['btn_label'] ?? 'Przycisk'));
+        $url   = htmlspecialchars((string) ($block['btn_url']   ?? '#'), ENT_QUOTES);
+        $inner = '<div style="line-height:1' . $aw . '"><a href="' . $url . '" target="' . $tgt . '"' . $rel . ' class="cms-btn" style="' . $css . '">' . $label . '</a></div>';
+    } elseif ($type === 'hero') {
+        $ha  = in_array($block['hero_text_align'] ?? 'center', ['left','center','right'], true) ? $block['hero_text_align'] : 'center';
+        $bg  = htmlspecialchars((string) ($block['hero_bg_color'] ?? '#1a2942'), ENT_QUOTES);
+        $tc  = htmlspecialchars((string) ($block['hero_text_color'] ?? '#ffffff'), ENT_QUOTES);
+        $mh  = max(100, min(1200, (int) ($block['hero_min_height'] ?? 400)));
+        $hs  = 'min-height:' . $mh . 'px;background-color:' . $bg . ';text-align:' . $ha . ';display:flex;align-items:center;justify-content:center;flex-direction:column;padding:60px 40px;box-sizing:border-box';
+        $bgi = (string) ($block['hero_bg_image'] ?? '');
+        if ($bgi !== '') { $hs .= ';background-image:url(' . htmlspecialchars($bgi, ENT_QUOTES) . ');background-size:cover;background-position:center'; }
+        $htitle = htmlspecialchars((string) ($block['hero_title'] ?? ''));
+        $hsub   = htmlspecialchars((string) ($block['hero_subtitle'] ?? ''));
+        $hbtn   = htmlspecialchars((string) ($block['hero_btn_text'] ?? ''));
+        $hurl   = htmlspecialchars((string) ($block['hero_btn_url'] ?? '#'), ENT_QUOTES);
+        $inner  = '<section class="cms-hero" style="' . $hs . '">'
+            . '<h2 class="cms-hero-title" style="color:' . $tc . ';font-size:clamp(2rem,5vw,3.5rem);font-weight:900;margin:0 0 1rem;line-height:1.15;max-width:800px">' . $htitle . '</h2>'
+            . ($hsub !== '' ? '<p class="cms-hero-subtitle" style="color:' . $tc . ';opacity:0.85;font-size:1.25rem;margin:0 0 2rem;max-width:600px;line-height:1.6">' . $hsub . '</p>' : '')
+            . ($hbtn !== '' ? '<a class="cms-btn" href="' . $hurl . '" style="display:inline-block;padding:12px 30px;background:#2563eb;color:#fff;border-radius:8px;font-weight:700;font-size:15px;text-decoration:none">' . $hbtn . '</a>' : '')
+            . '</section>';
+        $wrapStyle = '';
+    } elseif ($type === 'divider') {
+        $dc  = htmlspecialchars((string) ($block['div_color'] ?? '#e2e8f0'), ENT_QUOTES);
+        $dth = max(1, min(20, (int) ($block['div_thickness'] ?? 1)));
+        $dst = in_array($block['div_style'] ?? 'solid', ['solid','dashed','dotted'], true) ? $block['div_style'] : 'solid';
+        $dw  = max(10, min(100, (int) ($block['div_width'] ?? 100)));
+        $inner = '<hr style="border:none;border-top:' . $dth . 'px ' . $dst . ' ' . $dc . ';width:' . $dw . '%;margin:0 auto">';
+    } elseif ($type === 'spacer') {
+        $sh = max(4, min(400, (int) ($block['spacer_height'] ?? 40)));
+        $inner = '<div style="height:' . $sh . 'px"></div>';
+    } elseif ($type === 'html') {
+        $inner = '<div class="cms-block-html">' . (string) ($block['html_content'] ?? '') . '</div>';
+    }
+
+    if ($inner === '') { return ''; }
+
+    $wrapped = '<div class="cms-block cms-block-' . htmlspecialchars($type, ENT_QUOTES) . '"'
+        . ($wrapStyle !== '' ? ' style="' . $wrapStyle . '"' : '') . '>' . $inner . '</div>';
+    if ($linkUrl !== '') {
+        $wrapped = '<a href="' . htmlspecialchars($linkUrl, ENT_QUOTES) . '" target="' . $linkTgt . '"'
+            . ($linkTgt === '_blank' ? ' rel="noopener noreferrer"' : '')
+            . ' style="display:block;color:inherit;text-decoration:none">' . $wrapped . '</a>';
+    }
+    return $wrapped;
 }
 
 function cms_render_builder_blocks(array $page): string
@@ -777,121 +890,18 @@ function cms_render_builder_blocks(array $page): string
     if ($blocks === []) {
         return (string) ($page['content'] ?? '');
     }
+    $flow   = array_filter($blocks, static fn(array $b): bool => ($b['display'] ?? 'block') !== 'float');
+    $floats = array_filter($blocks, static fn(array $b): bool => ($b['display'] ?? 'block') === 'float');
 
-    ob_start();
-    foreach ($blocks as $block) {
-        $styles = [
-            'background:' . cms_sanitize_hex($block['background_color'], '#ffffff'),
-            'min-height:' . (int) $block['min_height'] . 'px',
-            'text-align:' . $block['align'],
-        ];
-        if ($block['background_image'] !== '') {
-            $styles[] = 'background-image:url(' . htmlspecialchars($block['background_image'], ENT_QUOTES, 'UTF-8') . ')';
-            $styles[] = 'background-size:cover';
-            $styles[] = 'background-position:center';
-            $styles[] = 'background-attachment:' . $block['background_attachment'];
-        }
-        $styleAttr = implode(';', $styles);
-        ?>
-        <section class="builder-block builder-block-<?= htmlspecialchars($block['type']) ?> align-<?= htmlspecialchars($block['align']) ?> builder-theme-<?= htmlspecialchars((string) ($block['section_theme'] ?? 'default')) ?> builder-typo-<?= htmlspecialchars((string) ($block['typography_scale'] ?? 'md')) ?>" style="<?= $styleAttr ?>">
-            <div class="builder-inner">
-                <?php if ($block['type'] === 'image' && $block['image_url'] !== ''): ?>
-                    <div class="builder-image-wrap">
-                        <img src="<?= htmlspecialchars($block['image_url']) ?>" alt="<?= htmlspecialchars($block['image_alt']) ?>" class="builder-image">
-                    </div>
-                <?php endif; ?>
-
-                <?php if ($block['type'] === 'gallery'): ?>
-                    <?php $galleryItems = preg_split('/\r\n|\r|\n/', (string) ($block['gallery_urls'] ?? '')) ?: []; ?>
-                    <?php $galleryItems = array_values(array_filter(array_map('trim', $galleryItems), static fn(string $u): bool => $u !== '')); ?>
-                    <?php if ($galleryItems !== []): ?>
-                        <div class="builder-gallery-grid">
-                            <?php foreach ($galleryItems as $galleryUrl): ?>
-                                <figure class="builder-gallery-item"><img src="<?= htmlspecialchars($galleryUrl) ?>" alt="<?= htmlspecialchars($block['title'] !== '' ? $block['title'] : 'Obraz galerii') ?>"></figure>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                <?php endif; ?>
-
-                <?php if ($block['type'] === 'container'): ?>
-                    <?php $containerItems = json_decode((string) ($block['container_items_json'] ?? '[]'), true); ?>
-                    <?php if (!is_array($containerItems)) { $containerItems = []; } ?>
-                    <?php if ($containerItems !== []): ?>
-                        <div class="builder-container-grid cols-<?= (int) ($block['container_columns'] ?? 2) ?>">
-                            <?php foreach ($containerItems as $containerItem): ?>
-                                <?php if (!is_array($containerItem)) { continue; } ?>
-                                <article class="builder-container-item">
-                                    <?php if (!empty($containerItem['image'])): ?><img class="builder-container-image" src="<?= htmlspecialchars((string) $containerItem['image']) ?>" alt=""><?php endif; ?>
-                                    <?php if (!empty($containerItem['title'])): ?><h3><?= htmlspecialchars((string) $containerItem['title']) ?></h3><?php endif; ?>
-                                    <?php if (!empty($containerItem['text'])): ?><p><?= nl2br(htmlspecialchars((string) $containerItem['text'])) ?></p><?php endif; ?>
-                                    <?php if (!empty($containerItem['button_text']) && !empty($containerItem['button_url'])): ?><a href="<?= htmlspecialchars((string) $containerItem['button_url']) ?>" class="builder-button"><?= htmlspecialchars((string) $containerItem['button_text']) ?></a><?php endif; ?>
-                                </article>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                <?php endif; ?>
-
-                <?php if ($block['type'] === 'plugin_slot'): ?>
-                    <div class="builder-plugin-slot">
-                        <?= cms_render_plugin_slot((string) ($block['plugin_slug'] ?? ''), $page) ?>
-                    </div>
-                <?php endif; ?>
-
-                <?php if ($block['title'] !== ''): ?>
-                    <h2><?= htmlspecialchars($block['title']) ?></h2>
-                <?php endif; ?>
-                <?php if ($block['text'] !== ''): ?>
-                    <div class="builder-text"><?= nl2br(htmlspecialchars($block['text'])) ?></div>
-                <?php endif; ?>
-                <?php if ($block['button_text'] !== '' && $block['button_url'] !== ''): ?>
-                    <a href="<?= htmlspecialchars($block['button_url']) ?>" class="builder-button"><?= htmlspecialchars($block['button_text']) ?></a>
-                <?php endif; ?>
-            </div>
-        </section>
-        <?php
+    $html = '<div class="cms-builder-page">';
+    foreach ($flow as $block) { $html .= cms_render_single_block($block); }
+    if ($floats !== []) {
+        $html .= '<div class="cms-builder-floats" style="position:relative;pointer-events:none">';
+        foreach ($floats as $block) { $html .= cms_render_single_block($block, true); }
+        $html .= '</div>';
     }
-
-    return trim((string) ob_get_clean());
-}
-
-function cms_save_page(array $data, ?int $id = null): int
-{
-    $title = trim($data['title'] ?? '');
-    $slug = cms_slugify($data['slug'] ?? $title);
-    $excerpt = trim($data['excerpt'] ?? '');
-    $content = trim($data['content'] ?? '');
-    $metaTitle = trim((string) ($data['meta_title'] ?? ''));
-    $metaDescription = trim((string) ($data['meta_description'] ?? ''));
-    $parentId = !empty($data['parent_id']) ? (int) $data['parent_id'] : null;
-    $status = ($data['status'] ?? 'draft') === 'published' ? 'published' : 'draft';
-    $isHomepage = !empty($data['is_homepage']) ? 1 : 0;
-    $sortOrder = (int) ($data['sort_order'] ?? 0);
-    $template = trim($data['template'] ?? 'default') ?: 'default';
-    $builderData = json_encode(cms_normalize_builder_blocks($data['builder_data'] ?? '[]'), JSON_UNESCAPED_UNICODE);
-
-    if ($title === '') {
-        throw new InvalidArgumentException('Tytul strony jest wymagany.');
-    }
-
-    $db = cms_db();
-    if ($isHomepage === 1) {
-        $db->exec('UPDATE cms_pages SET is_homepage = 0');
-    }
-
-    if ($parentId !== null && $id !== null && $parentId === $id) {
-        throw new InvalidArgumentException('Strona nie moze byc rodzicem samej siebie.');
-    }
-
-    if ($id !== null) {
-        cms_save_page_revision_snapshot($id, null);
-        $stmt = $db->prepare('UPDATE cms_pages SET parent_id = ?, title = ?, slug = ?, excerpt = ?, content = ?, meta_title = ?, meta_description = ?, builder_data = ?, status = ?, is_homepage = ?, sort_order = ?, template = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
-        $stmt->execute([$parentId, $title, $slug, $excerpt, $content, $metaTitle, $metaDescription, $builderData, $status, $isHomepage, $sortOrder, $template, $id]);
-        return $id;
-    }
-
-    $stmt = $db->prepare('INSERT INTO cms_pages (parent_id, title, slug, excerpt, content, meta_title, meta_description, builder_data, status, is_homepage, sort_order, template) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    $stmt->execute([$parentId, $title, $slug, $excerpt, $content, $metaTitle, $metaDescription, $builderData, $status, $isHomepage, $sortOrder, $template]);
-    return (int) $db->lastInsertId();
+    $html .= '</div>';
+    return $html;
 }
 
 function cms_delete_page(int $id): void

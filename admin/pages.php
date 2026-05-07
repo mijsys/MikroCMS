@@ -369,79 +369,82 @@ $adminTheme = cms_admin_theme($user);
                                             <input id="builderImportFile" type="file" accept="application/json,.json" style="display:none">
                                         </div>
                                     </div>
-                                </aside>
+                                <div class="bld-shell">
+                                    <!-- ── Palette ─────────────────────────────── -->
+                                    <aside class="bld-palette">
+                                        <div class="bld-palette-header">
+                                            <strong>Elementy</strong>
+                                            <span class="tiny">Kliknij kafelek — pojawi się na canvas</span>
+                                        </div>
+                                        <div class="bld-palette-tiles">
+                                            <button class="bld-tile" type="button" data-palette-add="heading">
+                                                <span class="bld-tile-icon">T</span>
+                                                <span class="bld-tile-label">Nagłówek</span>
+                                            </button>
+                                            <button class="bld-tile" type="button" data-palette-add="text">
+                                                <span class="bld-tile-icon">¶</span>
+                                                <span class="bld-tile-label">Tekst</span>
+                                            </button>
+                                            <button class="bld-tile" type="button" data-palette-add="image">
+                                                <span class="bld-tile-icon">🖼</span>
+                                                <span class="bld-tile-label">Obraz</span>
+                                            </button>
+                                            <button class="bld-tile" type="button" data-palette-add="button">
+                                                <span class="bld-tile-icon">↗</span>
+                                                <span class="bld-tile-label">Przycisk</span>
+                                            </button>
+                                            <button class="bld-tile" type="button" data-palette-add="hero">
+                                                <span class="bld-tile-icon">★</span>
+                                                <span class="bld-tile-label">Hero Banner</span>
+                                            </button>
+                                            <button class="bld-tile" type="button" data-palette-add="divider">
+                                                <span class="bld-tile-icon">—</span>
+                                                <span class="bld-tile-label">Separator</span>
+                                            </button>
+                                            <button class="bld-tile" type="button" data-palette-add="spacer">
+                                                <span class="bld-tile-icon">↕</span>
+                                                <span class="bld-tile-label">Odstęp</span>
+                                            </button>
+                                            <button class="bld-tile" type="button" data-palette-add="html">
+                                                <span class="bld-tile-icon">&lt;/&gt;</span>
+                                                <span class="bld-tile-label">HTML</span>
+                                            </button>
+                                        </div>
+                                        <div class="bld-palette-tools">
+                                            <button class="btn secondary bld-tool-btn" type="button" id="bldUndo" disabled>↩ Cofnij</button>
+                                            <button class="btn secondary bld-tool-btn" type="button" id="bldRedo" disabled>↪ Ponów</button>
+                                        </div>
+                                    </aside>
 
-                                <div class="builder-dnd-stage">
-                                    <div class="builder-canvas-wrap">
-                                        <div class="tiny" style="margin-bottom:8px">Canvas: upusc element z lewego menu, ustaw na stronie i od razu zobacz efekt.</div>
-                                        <div id="builderCanvasGrid" class="builder-canvas-grid"></div>
+                                    <!-- ── Canvas area ────────────────────────── -->
+                                    <div class="bld-canvas-area">
+                                        <div class="bld-canvas-topbar">
+                                            <div class="bld-canvas-bp-group">
+                                                <button class="bld-bp-btn active" type="button" data-canvas-bp="desktop" title="Desktop (1200px)">🖥</button>
+                                                <button class="bld-bp-btn" type="button" data-canvas-bp="tablet"  title="Tablet (768px)">⬜</button>
+                                                <button class="bld-bp-btn" type="button" data-canvas-bp="mobile"  title="Mobile (375px)">📱</button>
+                                            </div>
+                                            <div id="autosaveBadge" class="autosave-badge"></div>
+                                            <button class="btn ghost" type="button" id="pagePreviewBtn" style="font-size:12px;padding:6px 12px">👁 Podgląd</button>
+                                        </div>
+                                        <div class="bld-canvas-scroll">
+                                            <div id="cmsCanvas" class="bld-canvas bld-canvas-desktop"></div>
+                                        </div>
                                     </div>
-                                    <div class="builder-live-wrap">
-                                        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
-                                            <div class="tiny">Live preview: widok jak na docelowej stronie</div>
-                                            <div class="builder-live-breakpoints" id="builderLiveBreakpoints">
-                                                <button type="button" class="btn ghost active" data-live-breakpoint="desktop">Desktop</button>
-                                                <button type="button" class="btn ghost" data-live-breakpoint="tablet">Tablet</button>
-                                                <button type="button" class="btn ghost" data-live-breakpoint="mobile">Mobile</button>
+
+                                    <!-- ── Inspector ──────────────────────────── -->
+                                    <aside class="bld-inspector-area">
+                                        <div class="bld-inspector-header">
+                                            <strong>Właściwości</strong>
+                                        </div>
+                                        <div id="cmsInspector" class="bld-inspector-body">
+                                            <div class="insp-empty">
+                                                <div class="insp-empty-icon">←</div>
+                                                <p>Wybierz element na canvas,<br>aby edytować właściwości</p>
                                             </div>
                                         </div>
-                                        <div id="builderLiveContent" class="builder-live-content"></div>
-                                    </div>
+                                    </aside>
                                 </div>
-
-                                <aside class="builder-dnd-inspector">
-                                    <div class="builder-outline-wrap">
-                                        <div class="builder-outline-head">
-                                            <strong>Navigator sekcji</strong>
-                                            <span class="tiny">Wybierz sekcje i edytuj parametry po prawej</span>
-                                        </div>
-                                        <div id="builderOutlineList" class="builder-outline-list"></div>
-                                    </div>
-                                    <div class="builder-editor-main">
-                                        <div id="builderEmptyV2" class="builder-empty"><?= htmlspecialchars(cms_t('admin.pages.form.builder_empty', 'Builder jest pusty. Dodaj pierwszy blok.')) ?></div>
-                                        <div id="builderListV2" class="builder-list"></div>
-                                    </div>
-                                </aside>
-                            </div>
-                        </div>
-
-                    </form>
-                </section>
-            </div>
-
-            <div class="stack">
-                <section class="panel">
-                    <h2>Navigator stron</h2>
-                    <div class="page-navigator-grid">
-                        <?php foreach ($pages as $navPage): ?>
-                            <?php
-                            $navBlocks = cms_normalize_builder_blocks($navPage['builder_data'] ?? '[]');
-                            $thumbBlock = $navBlocks[0] ?? [];
-                            $thumbColor = (string) ($thumbBlock['background_color'] ?? '#e2ebf6');
-                            $thumbType = strtoupper((string) ($thumbBlock['type'] ?? 'TEXT'));
-                            ?>
-                            <article class="page-nav-card">
-                                <a class="page-nav-thumb" href="<?= htmlspecialchars(cms_url('admin/pages.php?edit=' . (int) $navPage['id'] . '&lang=' . rawurlencode($editorLang))) ?>" style="background:<?= htmlspecialchars($thumbColor) ?>">
-                                    <span><?= htmlspecialchars($thumbType) ?></span>
-                                </a>
-                                <div class="page-nav-meta">
-                                    <strong><?= htmlspecialchars((string) ($navPage['title'] ?? 'Bez tytulu')) ?></strong>
-                                    <span><?= htmlspecialchars((string) ($navPage['slug'] ?? '')) ?></span>
-                                </div>
-                                <div class="page-nav-actions">
-                                    <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/pages.php?edit=' . (int) $navPage['id'] . '&lang=' . rawurlencode($editorLang))) ?>">Edytuj</a>
-                                    <form method="post">
-                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
-                                        <input type="hidden" name="action" value="duplicate_page">
-                                        <input type="hidden" name="source_page_id" value="<?= (int) $navPage['id'] ?>">
-                                        <button class="btn ghost" type="submit">Duplikuj</button>
-                                    </form>
-                                </div>
-                            </article>
-                        <?php endforeach; ?>
-                    </div>
-                </section>
-
                 <?php if ($editPage): ?>
                 <section class="panel">
                     <h2><?= htmlspecialchars(cms_t('admin.pages.revisions.heading', 'Historia zmian strony')) ?></h2>
@@ -525,6 +528,7 @@ $draftKey = 'cms_draft_' . ($editPage ? (int) ($editPage['id'] ?? 0) : 'new') . 
 </div>
 <script>
 window.CMS_BUILDER_BLOCKS = <?= json_encode($builderBlocks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+window.CMS_UPLOAD_URL = <?= json_encode(cms_url('admin/upload.php')) ?>;
 window.CMS_DRAFT_KEY = <?= json_encode($draftKey) ?>;
 window.CMS_PAGE_PREVIEW_URL = <?= json_encode($previewUrl) ?>;
 window.CMS_LIVE_SITE_NAME = <?= json_encode(cms_get_setting('site_name', 'My CMS'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
