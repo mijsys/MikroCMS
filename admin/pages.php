@@ -185,8 +185,8 @@ $adminTheme = cms_admin_theme($user);
                                 <section class="page-studio-card page-studio-builder-launch">
                                     <div class="field" style="margin-bottom:0">
                                         <label><?= htmlspecialchars(cms_t('admin.pages.form.builder', 'Builder wygladu strony')) ?></label>
-                                        <div class="tiny"><?= htmlspecialchars(cms_t('admin.pages.form.builder_help', 'Dodawaj bloki, przeciagnij aby zmienic kolejnosc, eksportuj/importuj JSON i dziel gotowe uklady.')) ?></div>
-                                        <div class="tiny" style="margin-top:6px"><?= htmlspecialchars(cms_t('admin.pages.form.builder_help_easy', 'Tryb wizualny: otworz okno kreatora i ukladaj sekcje metoda drag and drop bez znajomosci kodu.')) ?></div>
+                                        <div class="tiny"><?= htmlspecialchars(cms_t('admin.pages.form.builder_help', 'Dodawaj sekcje, zmieniaj kolejnosc i tworz uklad strony bez kodowania.')) ?></div>
+                                        <div class="tiny" style="margin-top:6px"><?= htmlspecialchars(cms_t('admin.pages.form.builder_help_easy', 'Nowy tryb prosty prowadzi krok po kroku: wybierz blok, uzupelnij tresc i zapisz.')) ?></div>
                                     </div>
                                     <button class="btn" type="button" id="openBuilderWindowBtn"><?= htmlspecialchars(cms_t('admin.pages.form.open_builder_window', 'Otworz okno kreatora strony')) ?></button>
                                 </section>
@@ -250,6 +250,11 @@ $adminTheme = cms_admin_theme($user);
                                 </div>
                             </div>
                             <?php endif; ?>
+                            <div class="builder-quick-guide">
+                                <div class="builder-quick-step"><strong>1.</strong> Dodaj sekcje z paska narzedzi lub gotowego presetu.</div>
+                                <div class="builder-quick-step"><strong>2.</strong> Uzupelnij tresc, a szerokosc ustaw jednym kliknieciem.</div>
+                                <div class="builder-quick-step"><strong>3.</strong> Sprawdz podglad Live i zapisz strone.</div>
+                            </div>
                             <div class="builder-toolbar">
                                 <button class="btn ghost" type="button" data-builder2-add="hero">+ Hero</button>
                                 <button class="btn ghost" type="button" data-builder2-add="text">+ Text</button>
@@ -265,13 +270,15 @@ $adminTheme = cms_admin_theme($user);
                                 <button class="btn secondary" type="button" data-builder2-preset="pricing">Preset: Pricing</button>
                                 <button class="btn secondary" type="button" id="builderUndoBtn" disabled>Undo</button>
                                 <button class="btn secondary" type="button" id="builderRedoBtn" disabled>Redo</button>
+                                <button class="btn secondary" type="button" id="builderAutoLayoutBtn">Auto-uklad</button>
+                                <button class="btn secondary" type="button" id="builderToggleAdvancedBtn" aria-pressed="false">Tryb zaawansowany</button>
                                 <button class="btn secondary" type="button" id="builderSectionsFocusBtn"><?= htmlspecialchars(cms_t('admin.pages.form.show_sections', 'Pokaz sekcje strony')) ?></button>
                                 <button class="btn secondary" type="button" id="builderExportBtn"><?= htmlspecialchars(cms_t('admin.pages.form.export_json', 'Eksport JSON')) ?></button>
                                 <label class="btn secondary" for="builderImportFile" style="display:inline-flex;align-items:center;cursor:pointer"><?= htmlspecialchars(cms_t('admin.pages.form.import_json', 'Import JSON')) ?></label>
                                 <input id="builderImportFile" type="file" accept="application/json,.json" style="display:none">
                             </div>
                             <div class="builder-canvas-wrap">
-                                <div class="tiny" style="margin-bottom:8px">Canvas 12-kolumnowy (1.1.4): pozycja sekcji wg X/Y/W/H</div>
+                                <div class="tiny" style="margin-bottom:8px">Canvas wizualny: przeciagaj sekcje. W trybie prostym system sam uklada kolejnosc.</div>
                                 <div id="builderCanvasGrid" class="builder-canvas-grid"></div>
                             </div>
                             <div class="builder-live-wrap">

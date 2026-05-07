@@ -4,6 +4,8 @@
     var list = document.getElementById('builderListV2');
     var hidden = document.getElementById('builderDataInputV2');
     var canvas = document.getElementById('builderCanvasGrid');
+    var autoLayoutBtn = document.getElementById('builderAutoLayoutBtn');
+    var toggleAdvancedBtn = document.getElementById('builderToggleAdvancedBtn');
     var liveContent = document.getElementById('builderLiveContent');
     var liveWrap = liveContent ? liveContent.closest('.builder-live-wrap') : null;
     var liveBreakpoints = document.getElementById('builderLiveBreakpoints');
@@ -19,6 +21,20 @@
     var isApplyingHistory = false;
     var selectedIndex = -1;
     var layoutAnchorIndex = -1;
+    var advancedMode = localStorage.getItem('cms_builder_advanced_mode') === '1';
+
+    function setAdvancedMode(nextMode, skipSync) {
+        advancedMode = !!nextMode;
+        localStorage.setItem('cms_builder_advanced_mode', advancedMode ? '1' : '0');
+        document.body.classList.toggle('builder-mode-advanced', advancedMode);
+        if (toggleAdvancedBtn) {
+            toggleAdvancedBtn.setAttribute('aria-pressed', advancedMode ? 'true' : 'false');
+            toggleAdvancedBtn.textContent = advancedMode ? 'Tryb prosty' : 'Tryb zaawansowany';
+        }
+        if (!skipSync) {
+            sync();
+        }
+    }
 
     function esc(v) {
         return String(v || '').replace(/[&<>"']/g, function (ch) {
@@ -95,10 +111,16 @@
                 '</select></div>' +
                 '<div><label>Tytul</label><input type="text" data-field="title" value="' + esc(block.title) + '"></div>' +
                 '<div><label>Minimalna wysokosc</label><input type="number" min="200" max="1200" step="10" data-field="min_height" value="' + esc(block.min_height) + '"></div>' +
-                '<div><label>Grid X (0-11)</label><input type="number" min="0" max="11" step="1" data-field="layout_x" value="' + esc(block.layout_x) + '"></div>' +
-                '<div><label>Grid Y (0-200)</label><input type="number" min="0" max="200" step="1" data-field="layout_y" value="' + esc(block.layout_y) + '"></div>' +
-                '<div><label>Grid W (1-12)</label><input type="number" min="1" max="12" step="1" data-field="layout_w" value="' + esc(block.layout_w) + '"></div>' +
-                '<div><label>Grid H (1-12)</label><input type="number" min="1" max="12" step="1" data-field="layout_h" value="' + esc(block.layout_h) + '"></div>' +
+                '<div class="full builder-layout-simple"><label>Szerokosc sekcji</label><div class="builder-size-presets">' +
+                    '<button type="button" class="btn ghost" data-size-preset="12">Pelna</button>' +
+                    '<button type="button" class="btn ghost" data-size-preset="8">2/3</button>' +
+                    '<button type="button" class="btn ghost" data-size-preset="6">1/2</button>' +
+                    '<button type="button" class="btn ghost" data-size-preset="4">1/3</button>' +
+                '</div></div>' +
+                '<div class="builder-layout-advanced"><label>Grid X (0-11)</label><input type="number" min="0" max="11" step="1" data-field="layout_x" value="' + esc(block.layout_x) + '"></div>' +
+                '<div class="builder-layout-advanced"><label>Grid Y (0-200)</label><input type="number" min="0" max="200" step="1" data-field="layout_y" value="' + esc(block.layout_y) + '"></div>' +
+                '<div class="builder-layout-advanced"><label>Grid W (1-12)</label><input type="number" min="1" max="12" step="1" data-field="layout_w" value="' + esc(block.layout_w) + '"></div>' +
+                '<div class="builder-layout-advanced"><label>Grid H (1-12)</label><input type="number" min="1" max="12" step="1" data-field="layout_h" value="' + esc(block.layout_h) + '"></div>' +
                 '<div class="full"><label>Tekst</label><textarea data-field="text">' + esc(block.text) + '</textarea></div>' +
                 '<div><label>Kolor tla</label><input type="color" data-field="background_color" value="' + esc(block.background_color) + '"></div>' +
                 '<div><label>Zachowanie tla</label><select data-field="background_attachment"><option value="scroll">Przewija sie</option><option value="fixed">Nieruchome</option></select></div>' +
@@ -375,6 +397,27 @@
         });
 
         return arranged;
+    }
+
+    function applySimpleStackLayout(payload) {
+        if (!Array.isArray(payload) || payload.length === 0) {
+            return [];
+        }
+        var cursorY = 0;
+        return payload.map(function (block) {
+            var rect = normalizeRect(block || {});
+            var nextH = Math.max(2, Math.min(6, rect.h || 2));
+            var nextW = Math.max(1, Math.min(12, rect.w || 12));
+            var nextX = nextW >= 12 ? 0 : Math.floor((12 - nextW) / 2);
+            var out = Object.assign({}, block || {}, {
+                layout_x: String(nextX),
+                layout_y: String(cursorY),
+                layout_w: String(nextW),
+                layout_h: String(nextH)
+            });
+            cursorY += nextH;
+            return out;
+        });
     }
 
     function payloadLayoutChanged(a, b) {
@@ -711,7 +754,9 @@
     function sync(recordHistory) {
         var shouldRecordHistory = recordHistory !== false;
         var payload = readPayloadFromDom();
-        var resolved = autoArrangePayload(payload, layoutAnchorIndex);
+        var resolved = advancedMode
+            ? autoArrangePayload(payload, layoutAnchorIndex)
+            : applySimpleStackLayout(payload);
         layoutAnchorIndex = -1;
 
         if (payloadLayoutChanged(payload, resolved)) {
@@ -944,6 +989,9 @@
     }
 
     function setLayoutForIndex(index, nextX, nextY, nextW, nextH) {
+        if (!advancedMode) {
+            return;
+        }
         var item = list.querySelectorAll('.builder-item')[index];
         if (!item) {
             return;
@@ -1007,7 +1055,43 @@
             }
             card.style.gridColumn = (x + 1) + ' / span ' + w;
             card.style.gridRow = (y + 1) + ' / span ' + h;
-            card.innerHTML = '<strong>' + esc(block.title || ('Sekcja ' + (idx + 1))) + '</strong><span>' + esc(String(block.type || 'text').toUpperCase()) + ' • x' + x + ' y' + y + ' w' + w + ' h' + h + '</span><i class="builder-canvas-resize" title="Przeciagnij aby zmienic rozmiar"></i>';
+            var cardMeta = advancedMode
+                ? (esc(String(block.type || 'text').toUpperCase()) + ' • x' + x + ' y' + y + ' w' + w + ' h' + h)
+                : (esc(String(block.type || 'text').toUpperCase()) + ' • auto-uklad');
+            var simpleSizes = advancedMode ? '' : '<div class="builder-canvas-size-pills">'
+                + '<button type="button" class="btn ghost" data-canvas-size="12">Pelna</button>'
+                + '<button type="button" class="btn ghost" data-canvas-size="8">2/3</button>'
+                + '<button type="button" class="btn ghost" data-canvas-size="6">1/2</button>'
+                + '</div>';
+            card.innerHTML = '<strong>' + esc(block.title || ('Sekcja ' + (idx + 1))) + '</strong><span>' + cardMeta + '</span>' + simpleSizes + (advancedMode ? '<i class="builder-canvas-resize" title="Przeciagnij aby zmienic rozmiar"></i>' : '');
+
+            card.querySelectorAll('[data-canvas-size]').forEach(function (pill) {
+                pill.addEventListener('click', function (ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    var value = parseInt(String(pill.getAttribute('data-canvas-size') || '12'), 10) || 12;
+                    var targetItem = list.querySelectorAll('.builder-item')[idx];
+                    if (!targetItem) {
+                        return;
+                    }
+                    var widthField = targetItem.querySelector('[data-field="layout_w"]');
+                    if (!widthField) {
+                        return;
+                    }
+                    widthField.value = String(Math.max(1, Math.min(12, value)));
+                    setSelectedIndex(idx);
+                    sync();
+                });
+            });
+
+            card.addEventListener('click', function () {
+                focusEditorItem(idx);
+            });
+
+            if (!advancedMode) {
+                canvas.appendChild(card);
+                return;
+            }
 
             card.addEventListener('mousedown', function (ev) {
                 if (ev.target && ev.target.classList && ev.target.classList.contains('builder-canvas-resize')) {
@@ -1157,6 +1241,18 @@
         item.addEventListener('dragend', function () {
             item.classList.remove('dragging');
             sync();
+        });
+
+        item.querySelectorAll('[data-size-preset]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var value = parseInt(String(btn.getAttribute('data-size-preset') || '12'), 10) || 12;
+                var widthField = item.querySelector('[data-field="layout_w"]');
+                if (!widthField) {
+                    return;
+                }
+                widthField.value = String(Math.max(1, Math.min(12, value)));
+                sync();
+            });
         });
 
         var resizeHandle = item.querySelector('[data-resize-handle]');
@@ -1328,6 +1424,18 @@
         });
     }
 
+    if (autoLayoutBtn) {
+        autoLayoutBtn.addEventListener('click', function () {
+            sync();
+        });
+    }
+
+    if (toggleAdvancedBtn) {
+        toggleAdvancedBtn.addEventListener('click', function () {
+            setAdvancedMode(!advancedMode);
+        });
+    }
+
     var openBuilderWindowBtn = document.getElementById('openBuilderWindowBtn');
     var closeBuilderWindowBtn = document.getElementById('closeBuilderWindowBtn');
     var builderWindowShell = document.getElementById('builderWindowShell');
@@ -1402,6 +1510,7 @@
         });
     }
 
+    setAdvancedMode(advancedMode, true);
     renderEmpty();
     sync();
 
@@ -1589,6 +1698,8 @@
     var previewOverlay = document.getElementById('pagePreviewOverlay');
     var previewFrame   = document.getElementById('pagePreviewFrame');
     var previewClose   = document.getElementById('pagePreviewClose');
+    var builderWindowShellRef = document.getElementById('builderWindowShell');
+    var builderWindowBackdropRef = document.getElementById('builderWindowBackdrop');
 
     function openPreview() {
         if (!previewUrl) {
@@ -1609,8 +1720,12 @@
     if (previewClose) { previewClose.addEventListener('click', closePreview); }
 
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && builderWindowShell && builderWindowShell.classList.contains('open')) {
-            setBuilderWindow(false);
+        if (e.key === 'Escape' && builderWindowShellRef && builderWindowShellRef.classList.contains('open')) {
+            builderWindowShellRef.classList.remove('open');
+            if (builderWindowBackdropRef) {
+                builderWindowBackdropRef.classList.remove('open');
+            }
+            document.body.classList.remove('builder-window-open');
         }
         if (e.key === 'Escape' && previewOverlay && previewOverlay.classList.contains('open')) {
             closePreview();

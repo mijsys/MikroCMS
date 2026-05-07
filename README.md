@@ -21,12 +21,18 @@
 - Presety sekcji (hero, faq, cta, gallery, pricing) dodawane z palety.
 -  dodanie edytora tekstu zrób własne rozwiązanie
 - dodanie pluginu galeri
-- dodanie opcji dodania pluginów na róźne strony ale zaznaczyć czy mają dziediczyć 
+- dodanie opcji dodania pluginów na róźne strony ale zaznaczyć czy mają dziediczyć opcje np galeria na stronie a i b mają mieć inne zdjęcia albo takie same, w edytorze postów także dodaj opcję dodannia zdięć opcja z galerii albo dodanie poptrzez upload i tutaj też możemy ustawić zdjęcie gdzie chcemy a tekst ma się dostosować do obrazka aby obrazek nie zakrywał tekstu ok
 
 ### 1.1.7 - Production Ready
 - Rewizje buildera per strona (wersje ukladu) + szybkie przywracanie.
 - Import/eksport layoutu z mapowaniem sekcji.
 - Wydajnosc: wirtualizacja paneli i optymalizacje przy wiekszych stronach.
+
+### 1.1.7.1 - Website Builder Page UX
+- Domyslny tryb prosty (no-code): sekcje ukladaja sie automatycznie.
+- Szybkie ustawianie szerokosci sekcji bez recznego wpisywania grid X/Y.
+- Przelacznik trybu prosty/zaawansowany dla bardziej technicznej edycji.
+- Uproszczony canvas i instrukcja krok po kroku dla edytora stron.
 
 ### 1.1.8 - DB Engine Switch (Admin)
 - Przelaczanie silnika bazy danych miedzy MySQL i SQLite z poziomu panelu admin.
