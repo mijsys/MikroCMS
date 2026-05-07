@@ -201,6 +201,35 @@ $adminTheme = cms_admin_theme($user);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars(cms_t('admin.settings.title', 'Ustawienia CMS')) ?></title>
     <link rel="stylesheet" href="<?= htmlspecialchars(cms_url('admin/assets/dashboard.css')) ?>">
+    <style>
+        .settings-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+        .settings-tab-btn {
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #cbd5e1;
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .settings-tab-btn.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #fff;
+        }
+        .settings-pane-hidden {
+            display: none !important;
+        }
+        .settings-grid {
+            display: block;
+        }
+    </style>
 </head>
 <body class="admin-theme-<?= htmlspecialchars($adminTheme) ?>">
 <div class="layout">
@@ -223,9 +252,16 @@ $adminTheme = cms_admin_theme($user);
 
         <?php if ($flash): ?><div class="flash <?= htmlspecialchars($flash['type']) ?>"><?= htmlspecialchars($flash['message']) ?></div><?php endif; ?>
 
-        <div class="grid">
+        <div class="settings-tabs" id="settingsTabs" role="tablist" aria-label="Sekcje ustawien">
+            <button type="button" class="settings-tab-btn active" data-settings-tab="general" role="tab" aria-selected="true">Ogolne</button>
+            <button type="button" class="settings-tab-btn" data-settings-tab="data" role="tab" aria-selected="false">Warstwa danych</button>
+            <button type="button" class="settings-tab-btn" data-settings-tab="security" role="tab" aria-selected="false">Bezpieczenstwo / 2FA</button>
+            <button type="button" class="settings-tab-btn" data-settings-tab="translations" role="tab" aria-selected="false">Tlumaczenia</button>
+        </div>
+
+        <div class="grid settings-grid">
             <div class="stack">
-                <section class="panel">
+                <section class="panel" data-settings-pane="general" role="tabpanel">
                     <h2><?= htmlspecialchars(cms_t('admin.settings.general', 'Ustawienia ogolne')) ?></h2>
                     <form method="post">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
@@ -258,7 +294,7 @@ $adminTheme = cms_admin_theme($user);
                 </section>
             </div>
             <div class="stack">
-                <section class="panel">
+                <section class="panel" data-settings-pane="data" role="tabpanel">
                     <h2><?= htmlspecialchars(cms_t('admin.settings.data_layer', 'Warstwa danych')) ?></h2>
                     <div class="db-meta">
                         <div><strong>Driver:</strong> <?= htmlspecialchars(cms_db_driver()) ?></div>
@@ -270,7 +306,7 @@ $adminTheme = cms_admin_theme($user);
                     </div>
                 </section>
 
-                <section class="panel">
+                <section class="panel" data-settings-pane="security" role="tabpanel">
                     <h2><?= htmlspecialchars(cms_t('admin.settings.security_2fa', 'Bezpieczenstwo i 2FA')) ?></h2>
                     <p class="muted"><?= htmlspecialchars(cms_t('admin.settings.security_2fa.desc', 'Wymaga kodu TOTP oraz pliku .mijauth przy logowaniu.')) ?></p>
                     <div class="db-meta" style="margin-bottom:12px">
@@ -341,7 +377,7 @@ $adminTheme = cms_admin_theme($user);
                     <?php endif; ?>
                 </section>
 
-                <section class="panel">
+                <section class="panel" data-settings-pane="translations" role="tabpanel">
                     <h2><?= htmlspecialchars(cms_t('admin.settings.translations.heading', 'Tlumaczenia UI')) ?></h2>
                     <p class="muted"><?= htmlspecialchars(cms_t('admin.settings.translations.desc', 'Edytuj slownik tlumaczen (key -> value) w formacie JSON dla wybranego jezyka.')) ?></p>
                     <form method="post">
@@ -405,198 +441,42 @@ $adminTheme = cms_admin_theme($user);
 }());
 
 (function(){
-    var driverSelect = document.getElementById('dbTargetDriver');
-    var sqliteFields = document.getElementById('dbSwitchSqliteFields');
-    var mysqlFields = document.getElementById('dbSwitchMysqlFields');
-    if (!driverSelect || !sqliteFields || !mysqlFields) { return; }
+    var tabButtons = Array.prototype.slice.call(document.querySelectorAll('[data-settings-tab]'));
+    var panes = Array.prototype.slice.call(document.querySelectorAll('[data-settings-pane]'));
+    var stacks = Array.prototype.slice.call(document.querySelectorAll('.settings-grid > .stack'));
+    if (tabButtons.length === 0 || panes.length === 0) { return; }
 
-    function syncDbDriverUi() {
-        var isMysql = String(driverSelect.value || 'sqlite') === 'mysql';
-        mysqlFields.style.display = isMysql ? '' : 'none';
-        sqliteFields.style.display = isMysql ? 'none' : '';
-    }
-
-    driverSelect.addEventListener('change', syncDbDriverUi);
-    syncDbDriverUi();
-}());
-</script>
-</body>
-</html>
-
-                    <?php if (!$dbSwitchUnlocked): ?>
-                        <div class="flash error" style="margin-bottom:12px">Sekcja zablokowana.</div>
-                        <form method="post">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
-                            <input type="hidden" name="action" value="db_switch_unlock">
-                            <div class="field"><label>Haslo konta admin</label><input type="password" name="db_switch_password" required></div>
-                            <div class="field"><label>Kod TOTP (6 cyfr)</label><input type="text" name="db_switch_totp_code" maxlength="6" required></div>
-                            <div class="field"><label>Zawartosc pliku .mijauth</label><textarea name="db_switch_mijauth_file" style="min-height:120px" required></textarea></div>
-                            <button class="btn" type="submit">Odblokuj sekcje na 10 minut</button>
-                        </form>
-                    <?php else: ?>
-                        <div class="flash success" style="margin-bottom:12px">Sekcja odblokowana (pozostalo ok. <?= max(0, (int) floor($dbSwitchUnlockLeft / 60)) ?> min).</div>
-                        <form method="post" onsubmit="return confirm('Czy na pewno przelaczyc silnik bazy danych? Upewnij sie, ze docelowa baza jest gotowa.');">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
-                            <input type="hidden" name="action" value="db_switch_apply">
-                            <div class="field"><label>Docelowy silnik DB</label><select name="db_target_driver" id="dbTargetDriver"><option value="sqlite" <?= $dbSwitchDriver === 'sqlite' ? 'selected' : '' ?>>SQLite</option><option value="mysql" <?= $dbSwitchDriver === 'mysql' ? 'selected' : '' ?>>MySQL</option></select></div>
-
-                            <div id="dbSwitchSqliteFields">
-                                <div class="field"><label>Sciezka pliku SQLite</label><input type="text" name="db_sqlite_path" value="<?= htmlspecialchars($dbSwitchSqlitePath) ?>"></div>
-                            </div>
-
-                            <div id="dbSwitchMysqlFields">
-                                <div class="split">
-                                    <div class="field"><label>MySQL host</label><input type="text" name="db_mysql_host" value="<?= htmlspecialchars((string) ($config['mysql_host'] ?? '127.0.0.1')) ?>"></div>
-                                    <div class="field"><label>MySQL port</label><input type="text" name="db_mysql_port" value="<?= htmlspecialchars((string) ($config['mysql_port'] ?? '3306')) ?>"></div>
-                                </div>
-                                <div class="split">
-                                    <div class="field"><label>MySQL database</label><input type="text" name="db_mysql_database" value="<?= htmlspecialchars((string) ($config['mysql_database'] ?? '')) ?>"></div>
-                                    <div class="field"><label>MySQL user</label><input type="text" name="db_mysql_username" value="<?= htmlspecialchars((string) ($config['mysql_username'] ?? '')) ?>"></div>
-                                </div>
-                                <div class="split">
-                                    <div class="field"><label>MySQL password</label><input type="password" name="db_mysql_password" value="<?= htmlspecialchars((string) ($config['mysql_password'] ?? '')) ?>"></div>
-                                    <div class="field"><label>MySQL charset</label><input type="text" name="db_mysql_charset" value="<?= htmlspecialchars((string) ($config['mysql_charset'] ?? 'utf8mb4')) ?>"></div>
-                                </div>
-                            </div>
-
-                            <p class="muted" style="margin-top:0">Walidacja bezpieczenstwa sprawdza, czy docelowa baza zawiera tabele CMS oraz aktualnego uzytkownika.</p>
-                            <button class="btn danger" type="submit">Przelacz baze danych</button>
-                        </form>
-                    <?php endif; ?>
-                </section>
-
-                <section class="panel">
-                    <h2><?= htmlspecialchars(cms_t('admin.settings.security_2fa', 'Bezpieczenstwo i 2FA')) ?></h2>
-                    <p class="muted"><?= htmlspecialchars(cms_t('admin.settings.security_2fa.desc', 'Wymaga kodu TOTP oraz pliku .mijauth przy logowaniu.')) ?></p>
-                    <div class="db-meta" style="margin-bottom:12px">
-                        <div><strong>Status 2FA:</strong> <?= $twoFaEnabled ? 'Aktywne' : 'Nieaktywne' ?></div>
-                        <div><strong>Sekrety:</strong> <?= $twoFaHasSecrets ? 'Skonfigurowane' : 'Brak' ?></div>
-                    </div>
-
-                    <?php if (!$twoFaHasSecrets): ?>
-                        <form method="post" style="margin-bottom:12px">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
-                            <input type="hidden" name="action" value="twofa_generate_setup">
-                            <button class="btn" type="submit">Wygeneruj konfiguracje 2FA</button>
-                        </form>
-                    <?php else: ?>
-                        <div class="field"><label>Sekret TOTP</label><input type="text" readonly value="<?= htmlspecialchars($twoFaSecretPreview) ?>"></div>
-                        <div class="field"><label>URI TOTP (aplikacja Authenticator)</label><input type="text" readonly value="<?= htmlspecialchars($twoFaProvisioningUri) ?>"></div>
-                        <?php if ($twoFaQrUrl !== ''): ?>
-                            <div class="field">
-                                <label>Kod QR dla aplikacji TOTP</label>
-                                <div style="padding:10px;border:1px solid #475569;border-radius:12px;display:inline-block;background:#fff">
-                                    <img src="<?= htmlspecialchars($twoFaQrUrl) ?>" alt="QR TOTP" width="220" height="220">
-                                </div>
-                            </div>
-                        <?php endif; ?>
-
-                        <form method="post" style="margin-bottom:12px">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
-                            <input type="hidden" name="action" value="twofa_regenerate_file">
-                            <button class="btn" type="submit">Regeneruj plik .mijauth</button>
-                        </form>
-
-                        <?php if ($twoFaFileContent !== ''): ?>
-                            <div class="field">
-                                <label>Zawartosc pliku .mijauth (zapisz lokalnie)</label>
-                                <textarea readonly style="min-height:140px"><?= htmlspecialchars($twoFaFileContent) ?></textarea>
-                            </div>
-                            <div class="actions" style="margin-top:8px">
-                                <a class="btn secondary" href="<?= htmlspecialchars($twoFaMijauthDownloadHref) ?>" download="<?= htmlspecialchars($twoFaMijauthFileName) ?>">Pobierz plik .mijauth</a>
-                            </div>
-                            <p class="muted" style="margin-top:-4px">Plik zapisz jako <strong><?= htmlspecialchars($twoFaMijauthFileName) ?></strong>.</p>
-                        <?php endif; ?>
-
-                        <?php if ($twoFaRecoveryFileContent !== ''): ?>
-                            <div class="field">
-                                <label>Kody bezpieczeństwa (zapisz plik)</label>
-                                <textarea readonly style="min-height:180px"><?= htmlspecialchars($twoFaRecoveryFileContent) ?></textarea>
-                            </div>
-                            <div class="actions" style="margin-top:8px">
-                                <a class="btn secondary" href="<?= htmlspecialchars($twoFaRecoveryDownloadHref) ?>" download="<?= htmlspecialchars($twoFaRecoveryFileName) ?>">Pobierz kody bezpieczeństwa</a>
-                            </div>
-                        <?php endif; ?>
-
-                        <?php if (!$twoFaEnabled): ?>
-                            <form method="post">
-                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
-                                <input type="hidden" name="action" value="twofa_enable">
-                                <div class="field"><label>Kod TOTP (6 cyfr)</label><input type="text" name="twofa_totp_code" maxlength="6" required></div>
-                                <div class="field"><label>Zawartosc pliku .mijauth</label><textarea name="twofa_mijauth_file" style="min-height:120px" required><?= htmlspecialchars($twoFaFileContent) ?></textarea></div>
-                                <button class="btn" type="submit">Aktywuj 2FA</button>
-                            </form>
-                        <?php else: ?>
-                            <form method="post">
-                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
-                                <input type="hidden" name="action" value="twofa_disable">
-                                <button class="btn" type="submit">Wylacz 2FA</button>
-                            </form>
-                        <?php endif; ?>
-                    <?php endif; ?>
-                </section>
-
-                <section class="panel">
-                    <h2><?= htmlspecialchars(cms_t('admin.settings.translations.heading', 'Tlumaczenia UI')) ?></h2>
-                    <p class="muted"><?= htmlspecialchars(cms_t('admin.settings.translations.desc', 'Edytuj slownik tlumaczen (key -> value) w formacie JSON dla wybranego jezyka.')) ?></p>
-                    <form method="post">
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
-                        <input type="hidden" name="action" value="save_translations">
-                        <div class="field"><label><?= htmlspecialchars(cms_t('admin.settings.translations.lang', 'Jezyk slownika')) ?></label><input type="text" name="translation_lang" value="<?= htmlspecialchars($translationLang) ?>"></div>
-                        <div class="field"><label><?= htmlspecialchars(cms_t('admin.settings.translations.json', 'JSON tlumaczen')) ?></label><textarea name="translations_json" style="min-height:280px"><?= htmlspecialchars(is_string($translationsJson) ? $translationsJson : '{}') ?></textarea></div>
-                        <button class="btn" type="submit"><?= htmlspecialchars(cms_t('admin.settings.translations.save', 'Zapisz tlumaczenia')) ?></button>
-                    </form>
-                </section>
-            </div>
-        </div>
-    </main>
-</div>
-<?php if ($twoFaFileContent !== '' || $twoFaRecoveryFileContent !== ''): ?>
-<script>
-(function(){
-    var autoMijauth = <?= !empty($twoFaAutoDownload['mijauth']) ? 'true' : 'false' ?>;
-    var autoRecovery = <?= !empty($twoFaAutoDownload['recovery']) ? 'true' : 'false' ?>;
-    if (autoMijauth) {
-        var a = document.createElement('a');
-        a.href = <?= json_encode($twoFaMijauthDownloadHref, JSON_UNESCAPED_SLASHES) ?>;
-        a.download = <?= json_encode($twoFaMijauthFileName, JSON_UNESCAPED_SLASHES) ?>;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-    }
-    if (autoRecovery) {
-        var b = document.createElement('a');
-        b.href = <?= json_encode($twoFaRecoveryDownloadHref, JSON_UNESCAPED_SLASHES) ?>;
-        b.download = <?= json_encode($twoFaRecoveryFileName, JSON_UNESCAPED_SLASHES) ?>;
-        document.body.appendChild(b);
-        b.click();
-        b.remove();
-    }
-}());
-</script>
-<?php endif; ?>
-<script src="<?= htmlspecialchars(cms_url('admin/assets/dashboard.js?v=' . rawurlencode(CMS_CODE_VERSION))) ?>"></script>
-<script>
-(function(){
-    var select = document.getElementById('adminThemeSelect');
-    var cardsWrap = document.getElementById('adminThemePreviewCards');
-    if (!select || !cardsWrap) { return; }
-    var cards = cardsWrap.querySelectorAll('[data-theme-preview]');
-    function syncState() {
-        var val = String(select.value || 'dark');
-        cards.forEach(function(card){
-            var active = card.getAttribute('data-theme-preview') === val;
-            card.classList.toggle('active', active);
+    function activateTab(tabKey) {
+        tabButtons.forEach(function(btn){
+            var active = btn.getAttribute('data-settings-tab') === tabKey;
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-selected', active ? 'true' : 'false');
         });
+        panes.forEach(function(pane){
+            pane.classList.toggle('settings-pane-hidden', pane.getAttribute('data-settings-pane') !== tabKey);
+        });
+        stacks.forEach(function(stack){
+            var visibleCount = stack.querySelectorAll('[data-settings-pane]:not(.settings-pane-hidden)').length;
+            stack.style.display = visibleCount > 0 ? '' : 'none';
+        });
+        try { localStorage.setItem('cms_settings_tab', tabKey); } catch (e) {}
     }
-    cards.forEach(function(card){
-        card.addEventListener('click', function(){
-            select.value = card.getAttribute('data-theme-preview') || 'dark';
-            syncState();
+
+    tabButtons.forEach(function(btn){
+        btn.addEventListener('click', function(){
+            activateTab(btn.getAttribute('data-settings-tab') || 'general');
         });
     });
-    select.addEventListener('change', syncState);
-    syncState();
+
+    var initial = 'general';
+    try {
+        var stored = localStorage.getItem('cms_settings_tab');
+        if (stored) { initial = stored; }
+    } catch (e) {}
+    if (!tabButtons.some(function(btn){ return btn.getAttribute('data-settings-tab') === initial; })) {
+        initial = 'general';
+    }
+    activateTab(initial);
 }());
 </script>
 </body>

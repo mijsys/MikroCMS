@@ -50,6 +50,12 @@
 - Uchwyt przeciagania sekcji bezposrednio w live preview.
 - Snapowane strefy drop miedzy sekcjami (gora/dol) dla szybszego ukladu.
 
+### 1.1.7.8 - Builder Rebuild + Settings Fix
+- Kompletny rebuild buildera stron: palette + canvas + inspector (styl Wix/Elementor).
+- Nowe typy blokow i uproszczony workflow dodawania/edycji elementow.
+- Upload obrazow z panelu admin i aktualizacja renderowania blokow.
+- Naprawa strony ustawien: usuniecie rozjazdu i dodanie zakladek sekcji.
+
 ### 1.1.8 - DB Engine Switch (Admin)
 - Przelaczanie silnika bazy danych miedzy MySQL i SQLite z poziomu panelu admin.
 - Sekcja zabezpieczona dodatkowo: haslo + 2FA (TOTP + plik .mijauth) przed odblokowaniem akcji.

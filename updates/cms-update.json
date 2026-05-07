@@ -1,15 +1,15 @@
 {
   "name": "MikroCMS Core",
   "channel": "stable",
-  "latest_version": "1.1.7.3",
+  "latest_version": "1.1.7.8",
   "published_at": "2026-05-07T00:00:00Z",
   "changelog_url": "https://github.com/mijsys/MikroCMS/releases",
   "download_url": "https://github.com/mijsys/MikroCMS/archive/refs/heads/main.zip",
-  "notes": "Wersja 1.1.7.3: przebudowa buildera do ukladu studio DnD (lewy panel komponentow, srodek canvas, prawa kolumna inspektora).",
+  "notes": "Wersja 1.1.7.8: kompletny rebuild page buildera (palette/canvas/inspector), upload obrazow oraz naprawa rozjazdu strony ustawien (zakladki sekcji).",
   "changes": [
-    "Builder jako studio DnD: panel komponentow po lewej, canvas/live preview po srodku, inspektor i navigator po prawej",
-    "Drag and drop bezposrednio na canvas z wyraznym stanem gotowosci drop",
-    "Usprawniona organizacja narzedzi i presetow pod workflow wybierz-upusc-edytuj",
-    "Lepsza czytelnosc i ergonomia pracy przy edycji stron"
+    "Nowy builder stron: tile palette + canvas + inspector z blokami heading/text/image/button/hero/divider/spacer/html",
+    "Drag and drop z narzedziami inline, float/block display, undo/redo oraz upload obrazow",
+    "Nowy endpoint admin/upload.php i aktualizacja renderera blokow po stronie backendu",
+    "Naprawiony admin/settings.php: usuniety zdublowany fragment i dodane zakladki sekcji"
   ]
 }
