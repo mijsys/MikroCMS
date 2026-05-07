@@ -1549,6 +1549,34 @@
         dragNewType = null;
     });
 
+    if (canvas) {
+        canvas.addEventListener('dragover', function (e) {
+            if (!dragNewType) {
+                return;
+            }
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            canvas.classList.add('builder-canvas-drop-ready');
+        });
+
+        canvas.addEventListener('dragleave', function () {
+            canvas.classList.remove('builder-canvas-drop-ready');
+        });
+
+        canvas.addEventListener('drop', function (e) {
+            if (!dragNewType) {
+                return;
+            }
+            e.preventDefault();
+            canvas.classList.remove('builder-canvas-drop-ready');
+            list.appendChild(makeItem(dragNewType));
+            renderEmpty();
+            sync();
+            setSelectedIndex(list.querySelectorAll('.builder-item').length - 1);
+            dragNewType = null;
+        });
+    }
+
     document.querySelectorAll('[data-builder2-add]').forEach(function (btn) {
         btn.draggable = true;
         btn.addEventListener('click', function () {
@@ -1568,6 +1596,9 @@
         btn.addEventListener('dragend', function () {
             btn.classList.remove('toolbar-dragging');
             removePlaceholder();
+            if (canvas) {
+                canvas.classList.remove('builder-canvas-drop-ready');
+            }
             dragNewType = null;
         });
     });

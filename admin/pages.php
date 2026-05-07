@@ -330,63 +330,78 @@ $adminTheme = cms_admin_theme($user);
                                 </div>
                             </div>
                             <?php endif; ?>
-                            <div class="builder-quick-guide">
-                                <div class="builder-quick-step"><strong>1.</strong> Dodaj sekcje z paska narzedzi lub gotowego presetu.</div>
-                                <div class="builder-quick-step"><strong>2.</strong> Uzupelnij tresc, a szerokosc ustaw jednym kliknieciem.</div>
-                                <div class="builder-quick-step"><strong>3.</strong> Sprawdz podglad Live i zapisz strone.</div>
-                            </div>
-                            <div class="builder-toolbar">
-                                <button class="btn ghost" type="button" data-builder2-add="hero">+ Hero</button>
-                                <button class="btn ghost" type="button" data-builder2-add="text">+ Text</button>
-                                <button class="btn ghost" type="button" data-builder2-add="image">+ Image</button>
-                                <button class="btn ghost" type="button" data-builder2-add="container">+ Container</button>
-                                <button class="btn ghost" type="button" data-builder2-add="gallery">+ Gallery</button>
-                                <button class="btn ghost" type="button" data-builder2-add="plugin_slot">+ Plugin Slot</button>
-                                <span class="builder-toolbar-separator" aria-hidden="true"></span>
-                                <button class="btn secondary" type="button" data-builder2-preset="hero">Preset: Hero</button>
-                                <button class="btn secondary" type="button" data-builder2-preset="faq">Preset: FAQ</button>
-                                <button class="btn secondary" type="button" data-builder2-preset="cta">Preset: CTA</button>
-                                <button class="btn secondary" type="button" data-builder2-preset="gallery">Preset: Gallery</button>
-                                <button class="btn secondary" type="button" data-builder2-preset="pricing">Preset: Pricing</button>
-                                <span class="builder-toolbar-separator" aria-hidden="true"></span>
-                                <button class="btn secondary" type="button" data-builder2-template="landing_classic">Szablon: Landing Classic</button>
-                                <button class="btn secondary" type="button" data-builder2-template="landing_product">Szablon: Landing Product</button>
-                                <button class="btn secondary" type="button" id="builderUndoBtn" disabled>Undo</button>
-                                <button class="btn secondary" type="button" id="builderRedoBtn" disabled>Redo</button>
-                                <button class="btn secondary" type="button" id="builderAutoLayoutBtn">Auto-uklad</button>
-                                <button class="btn secondary" type="button" id="builderToggleAdvancedBtn" aria-pressed="false">Tryb zaawansowany</button>
-                                <button class="btn secondary" type="button" id="builderSectionsFocusBtn"><?= htmlspecialchars(cms_t('admin.pages.form.show_sections', 'Pokaz sekcje strony')) ?></button>
-                                <button class="btn secondary" type="button" id="builderExportBtn"><?= htmlspecialchars(cms_t('admin.pages.form.export_json', 'Eksport JSON')) ?></button>
-                                <label class="btn secondary" for="builderImportFile" style="display:inline-flex;align-items:center;cursor:pointer"><?= htmlspecialchars(cms_t('admin.pages.form.import_json', 'Import JSON')) ?></label>
-                                <input id="builderImportFile" type="file" accept="application/json,.json" style="display:none">
-                            </div>
-                            <div class="builder-canvas-wrap">
-                                <div class="tiny" style="margin-bottom:8px">Canvas wizualny: przeciagaj sekcje. W trybie prostym system sam uklada kolejnosc.</div>
-                                <div id="builderCanvasGrid" class="builder-canvas-grid"></div>
-                            </div>
-                            <div class="builder-live-wrap">
-                                <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
-                                    <div class="tiny">Live view 1.1.5: podglad aktualnej tresci strony podczas edycji</div>
-                                    <div class="builder-live-breakpoints" id="builderLiveBreakpoints">
-                                        <button type="button" class="btn ghost active" data-live-breakpoint="desktop">Desktop</button>
-                                        <button type="button" class="btn ghost" data-live-breakpoint="tablet">Tablet</button>
-                                        <button type="button" class="btn ghost" data-live-breakpoint="mobile">Mobile</button>
+                            <div class="builder-dnd-shell">
+                                <aside class="builder-dnd-sidebar">
+                                    <div class="builder-sidebar-group">
+                                        <strong>Komponenty</strong>
+                                        <span class="tiny">Przeciagnij z menu i upusc na canvas</span>
+                                        <div class="builder-toolbar builder-toolbar-vertical">
+                                            <button class="btn ghost" type="button" data-builder2-add="hero">+ Hero</button>
+                                            <button class="btn ghost" type="button" data-builder2-add="text">+ Text</button>
+                                            <button class="btn ghost" type="button" data-builder2-add="image">+ Image</button>
+                                            <button class="btn ghost" type="button" data-builder2-add="container">+ Container</button>
+                                            <button class="btn ghost" type="button" data-builder2-add="gallery">+ Gallery</button>
+                                            <button class="btn ghost" type="button" data-builder2-add="plugin_slot">+ Plugin Slot</button>
+                                        </div>
                                     </div>
-                                </div>
-                                <div id="builderLiveContent" class="builder-live-content"></div>
-                            </div>
-                            <div class="builder-editor-grid">
-                                <aside class="builder-outline-wrap">
-                                    <div class="builder-outline-head">
-                                        <strong>Outline sekcji</strong>
-                                        <span class="tiny">Kliknij sekcje, aby podswietlic ja na canvasie i liscie</span>
+                                    <div class="builder-sidebar-group">
+                                        <strong>Presety i szablony</strong>
+                                        <div class="builder-toolbar builder-toolbar-vertical">
+                                            <button class="btn secondary" type="button" data-builder2-preset="hero">Preset: Hero</button>
+                                            <button class="btn secondary" type="button" data-builder2-preset="faq">Preset: FAQ</button>
+                                            <button class="btn secondary" type="button" data-builder2-preset="cta">Preset: CTA</button>
+                                            <button class="btn secondary" type="button" data-builder2-preset="gallery">Preset: Gallery</button>
+                                            <button class="btn secondary" type="button" data-builder2-preset="pricing">Preset: Pricing</button>
+                                            <button class="btn secondary" type="button" data-builder2-template="landing_classic">Szablon: Landing Classic</button>
+                                            <button class="btn secondary" type="button" data-builder2-template="landing_product">Szablon: Landing Product</button>
+                                        </div>
                                     </div>
-                                    <div id="builderOutlineList" class="builder-outline-list"></div>
+                                    <div class="builder-sidebar-group">
+                                        <strong>Narzedzia</strong>
+                                        <div class="builder-toolbar builder-toolbar-vertical">
+                                            <button class="btn secondary" type="button" id="builderUndoBtn" disabled>Undo</button>
+                                            <button class="btn secondary" type="button" id="builderRedoBtn" disabled>Redo</button>
+                                            <button class="btn secondary" type="button" id="builderAutoLayoutBtn">Auto-uklad</button>
+                                            <button class="btn secondary" type="button" id="builderToggleAdvancedBtn" aria-pressed="false">Tryb zaawansowany</button>
+                                            <button class="btn secondary" type="button" id="builderSectionsFocusBtn"><?= htmlspecialchars(cms_t('admin.pages.form.show_sections', 'Pokaz sekcje strony')) ?></button>
+                                            <button class="btn secondary" type="button" id="builderExportBtn"><?= htmlspecialchars(cms_t('admin.pages.form.export_json', 'Eksport JSON')) ?></button>
+                                            <label class="btn secondary" for="builderImportFile" style="display:inline-flex;align-items:center;cursor:pointer"><?= htmlspecialchars(cms_t('admin.pages.form.import_json', 'Import JSON')) ?></label>
+                                            <input id="builderImportFile" type="file" accept="application/json,.json" style="display:none">
+                                        </div>
+                                    </div>
                                 </aside>
-                                <div class="builder-editor-main">
-                                    <div id="builderEmptyV2" class="builder-empty"><?= htmlspecialchars(cms_t('admin.pages.form.builder_empty', 'Builder jest pusty. Dodaj pierwszy blok.')) ?></div>
-                                    <div id="builderListV2" class="builder-list"></div>
+
+                                <div class="builder-dnd-stage">
+                                    <div class="builder-canvas-wrap">
+                                        <div class="tiny" style="margin-bottom:8px">Canvas: upusc element z lewego menu, ustaw na stronie i od razu zobacz efekt.</div>
+                                        <div id="builderCanvasGrid" class="builder-canvas-grid"></div>
+                                    </div>
+                                    <div class="builder-live-wrap">
+                                        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+                                            <div class="tiny">Live preview: widok jak na docelowej stronie</div>
+                                            <div class="builder-live-breakpoints" id="builderLiveBreakpoints">
+                                                <button type="button" class="btn ghost active" data-live-breakpoint="desktop">Desktop</button>
+                                                <button type="button" class="btn ghost" data-live-breakpoint="tablet">Tablet</button>
+                                                <button type="button" class="btn ghost" data-live-breakpoint="mobile">Mobile</button>
+                                            </div>
+                                        </div>
+                                        <div id="builderLiveContent" class="builder-live-content"></div>
+                                    </div>
                                 </div>
+
+                                <aside class="builder-dnd-inspector">
+                                    <div class="builder-outline-wrap">
+                                        <div class="builder-outline-head">
+                                            <strong>Navigator sekcji</strong>
+                                            <span class="tiny">Wybierz sekcje i edytuj parametry po prawej</span>
+                                        </div>
+                                        <div id="builderOutlineList" class="builder-outline-list"></div>
+                                    </div>
+                                    <div class="builder-editor-main">
+                                        <div id="builderEmptyV2" class="builder-empty"><?= htmlspecialchars(cms_t('admin.pages.form.builder_empty', 'Builder jest pusty. Dodaj pierwszy blok.')) ?></div>
+                                        <div id="builderListV2" class="builder-list"></div>
+                                    </div>
+                                </aside>
                             </div>
                         </div>
 
