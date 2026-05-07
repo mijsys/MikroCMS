@@ -380,7 +380,7 @@ function cms_init_db(PDO $db): void
         ['site_name', 'My CMS'],
         ['site_tagline', 'Nowy system CMS oparty o portfolio'],
         ['theme', 'default'],
-        ['cms_core_version', '1.1.7.8'],
+        ['cms_core_version', '1.1.8'],
         ['site_mode', 'multipage'],
         ['theme_variant', 'multipage'],
         ['site_default_language', 'pl'],
