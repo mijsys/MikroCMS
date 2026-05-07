@@ -502,6 +502,48 @@
         setSelectedIndex(toIndex);
     }
 
+    function removeEditorItem(index) {
+        var items = list.querySelectorAll('.builder-item');
+        if (!items.length || index < 0 || index >= items.length) {
+            return;
+        }
+        var target = items[index];
+        if (!target) {
+            return;
+        }
+        target.remove();
+        renderEmpty();
+        selectedIndex = -1;
+        sync();
+    }
+
+    function reorderEditorItemRelative(fromIndex, targetIndex, placeAfter) {
+        var items = Array.prototype.slice.call(list.querySelectorAll('.builder-item'));
+        if (!items.length || fromIndex < 0 || targetIndex < 0 || fromIndex >= items.length || targetIndex >= items.length) {
+            return;
+        }
+        if (fromIndex === targetIndex && !placeAfter) {
+            return;
+        }
+
+        var moving = items[fromIndex];
+        var target = items[targetIndex];
+        if (!moving || !target || moving === target) {
+            return;
+        }
+
+        if (placeAfter) {
+            list.insertBefore(moving, target.nextSibling);
+        } else {
+            list.insertBefore(moving, target);
+        }
+
+        var reordered = Array.prototype.slice.call(list.querySelectorAll('.builder-item'));
+        var nextIndex = reordered.indexOf(moving);
+        sync();
+        setSelectedIndex(nextIndex >= 0 ? nextIndex : -1);
+    }
+
     function duplicateEditorItem(index) {
         var items = list.querySelectorAll('.builder-item');
         if (!items.length || index < 0 || index >= items.length) {
@@ -978,6 +1020,17 @@
         });
     }
 
+    var liveDragIndex = -1;
+
+    function clearLiveDropIndicators() {
+        if (!liveContent) {
+            return;
+        }
+        liveContent.querySelectorAll('.builder-live-section').forEach(function (section) {
+            section.classList.remove('drop-before', 'drop-after', 'dragging');
+        });
+    }
+
     function renderLiveContent(payload) {
         if (!liveContent) {
             return;
@@ -1106,6 +1159,13 @@
                 + '<span>#' + (idx + 1) + '</span>'
                 + '<span>' + esc(type.toUpperCase()) + '</span>'
                 + '<span>x' + entry.x + ' y' + entry.y + '</span>'
+                + '<div class="builder-live-toolbar">'
+                + '<button type="button" class="btn ghost" data-live-action="move-up" title="Przesun sekcje wyzej">↑</button>'
+                + '<button type="button" class="btn ghost" data-live-action="move-down" title="Przesun sekcje nizej">↓</button>'
+                + '<button type="button" class="btn ghost" data-live-action="duplicate" title="Duplikuj sekcje">⧉</button>'
+                + '<button type="button" class="btn ghost" data-live-action="delete" title="Usun sekcje">✕</button>'
+                + '<button type="button" class="btn ghost" data-live-drag-handle title="Przeciagnij sekcje">⋮⋮</button>'
+                + '</div>'
                 + '</div>'
                 + '<div class="builder-live-inner">' + contentHtml + '</div>';
 
@@ -1131,6 +1191,77 @@
                     targetField.value = nextValue;
                     sync();
                 });
+            });
+
+            section.querySelectorAll('[data-live-action]').forEach(function (btn) {
+                btn.addEventListener('click', function (ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    var action = btn.getAttribute('data-live-action') || '';
+                    if (action === 'move-up') {
+                        moveEditorItem(idx, -1);
+                        return;
+                    }
+                    if (action === 'move-down') {
+                        moveEditorItem(idx, 1);
+                        return;
+                    }
+                    if (action === 'duplicate') {
+                        duplicateEditorItem(idx);
+                        return;
+                    }
+                    if (action === 'delete') {
+                        removeEditorItem(idx);
+                    }
+                });
+            });
+
+            section.setAttribute('draggable', 'true');
+            section.addEventListener('dragstart', function (ev) {
+                var target = ev.target;
+                var handle = target && target.closest ? target.closest('[data-live-drag-handle]') : null;
+                if (!handle) {
+                    ev.preventDefault();
+                    return;
+                }
+                liveDragIndex = idx;
+                section.classList.add('dragging');
+                if (ev.dataTransfer) {
+                    ev.dataTransfer.effectAllowed = 'move';
+                    ev.dataTransfer.setData('text/plain', String(idx));
+                }
+            });
+
+            section.addEventListener('dragover', function (ev) {
+                if (liveDragIndex < 0 || liveDragIndex === idx) {
+                    return;
+                }
+                ev.preventDefault();
+                var rect = section.getBoundingClientRect();
+                var placeAfter = ev.clientY > rect.top + rect.height / 2;
+                clearLiveDropIndicators();
+                section.classList.add(placeAfter ? 'drop-after' : 'drop-before');
+                if (ev.dataTransfer) {
+                    ev.dataTransfer.dropEffect = 'move';
+                }
+            });
+
+            section.addEventListener('drop', function (ev) {
+                if (liveDragIndex < 0 || liveDragIndex === idx) {
+                    return;
+                }
+                ev.preventDefault();
+                var rect = section.getBoundingClientRect();
+                var placeAfter = ev.clientY > rect.top + rect.height / 2;
+                var fromIndex = liveDragIndex;
+                liveDragIndex = -1;
+                clearLiveDropIndicators();
+                reorderEditorItemRelative(fromIndex, idx, placeAfter);
+            });
+
+            section.addEventListener('dragend', function () {
+                liveDragIndex = -1;
+                clearLiveDropIndicators();
             });
 
             section.addEventListener('click', function () {
@@ -1365,10 +1496,11 @@
         });
 
         item.querySelector('[data-remove-block]').addEventListener('click', function () {
-            item.remove();
-            renderEmpty();
-            selectedIndex = -1;
-            sync();
+            var all = Array.prototype.slice.call(list.querySelectorAll('.builder-item'));
+            var idx = all.indexOf(item);
+            if (idx >= 0) {
+                removeEditorItem(idx);
+            }
         });
 
         var duplicateBtn = item.querySelector('[data-duplicate-block]');

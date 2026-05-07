@@ -1110,6 +1110,38 @@ body:not(.builder-mode-advanced) .builder-canvas-item:active {
 	font-weight: 700;
 	color: var(--muted);
 	background: color-mix(in srgb, var(--panel-soft) 64%, transparent);
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.builder-live-toolbar {
+	display: inline-flex;
+	gap: 4px;
+	margin-left: auto;
+}
+
+.builder-live-toolbar .btn {
+	padding: 4px 7px;
+	font-size: 11px;
+	line-height: 1;
+	min-width: 28px;
+	justify-content: center;
+}
+
+.builder-live-toolbar [data-live-drag-handle] {
+	cursor: grab;
+}
+
+.builder-live-section.dragging {
+	opacity: 0.52;
+}
+
+.builder-live-section.drop-before {
+	box-shadow: inset 0 4px 0 0 color-mix(in srgb, var(--accent) 80%, transparent), 0 10px 24px color-mix(in srgb, var(--panel-shadow) 75%, transparent);
+}
+
+.builder-live-section.drop-after {
+	box-shadow: inset 0 -4px 0 0 color-mix(in srgb, var(--accent) 80%, transparent), 0 10px 24px color-mix(in srgb, var(--panel-shadow) 75%, transparent);
 }
 
 .builder-live-inner {
