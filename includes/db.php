@@ -380,7 +380,7 @@ function cms_init_db(PDO $db): void
         ['site_name', 'My CMS'],
         ['site_tagline', 'Nowy system CMS oparty o portfolio'],
         ['theme', 'default'],
-        ['cms_core_version', '1.1.8.1'],
+        ['cms_core_version', '1.1.8.2'],
         ['site_mode', 'multipage'],
         ['theme_variant', 'multipage'],
         ['site_default_language', 'pl'],
@@ -513,6 +513,69 @@ function cms_set_setting(string $key, string $value): void
     }
 
     cms_db()->prepare('INSERT OR REPLACE INTO cms_settings (key, value) VALUES (?, ?)')->execute([$key, $value]);
+}
+
+function cms_validate_target_database(string $targetDriver, array $targetConfig, ?int $currentUserId = null): array
+{
+    try {
+        if ($targetDriver === 'mysql') {
+            if (!extension_loaded('pdo_mysql')) {
+                return ['valid' => false, 'error' => 'Brak rozszerzenia pdo_mysql na serwerze.'];
+            }
+            $database = trim((string) ($targetConfig['mysql_database'] ?? ''));
+            $username = trim((string) ($targetConfig['mysql_username'] ?? ''));
+            if ($database === '' || $username === '') {
+                return ['valid' => false, 'error' => 'Konfiguracja MySQL jest niepelna.'];
+            }
+            $dsn = sprintf(
+                'mysql:host=%s;port=%s;dbname=%s;charset=%s',
+                $targetConfig['mysql_host'] ?? '127.0.0.1',
+                $targetConfig['mysql_port'] ?? '3306',
+                $database,
+                $targetConfig['mysql_charset'] ?? 'utf8mb4'
+            );
+            $testDb = new PDO($dsn, $username, (string) ($targetConfig['mysql_password'] ?? ''));
+        } else {
+            $sqlitePath = trim((string) ($targetConfig['sqlite_path'] ?? CMS_SQLITE_DEFAULT_PATH)) ?: CMS_SQLITE_DEFAULT_PATH;
+            if (!is_dir(dirname($sqlitePath))) {
+                return ['valid' => false, 'error' => 'Katalog dla SQLite nie istnieje i nie mozna go utworzyc.'];
+            }
+            $testDb = new PDO('sqlite:' . $sqlitePath);
+        }
+
+        $testDb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $testDb->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+
+        $requiredTables = ['cms_settings', 'cms_users', 'cms_pages'];
+        foreach ($requiredTables as $table) {
+            if ($targetDriver === 'mysql') {
+                $stmt = $testDb->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?");
+                $stmt->execute([$targetConfig['mysql_database'], $table]);
+                $exists = (int) $stmt->fetchColumn() > 0;
+            } else {
+                $stmt = $testDb->prepare("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name = ?");
+                $stmt->execute([$table]);
+                $exists = (int) $stmt->fetchColumn() > 0;
+            }
+
+            if (!$exists) {
+                return ['valid' => false, 'error' => "Tabela '{$table}' nie istnieje w docelowej bazie."];
+            }
+        }
+
+        if ($currentUserId !== null && $currentUserId > 0) {
+            $userStmt = $testDb->prepare('SELECT COUNT(*) FROM cms_users WHERE id = ?');
+            $userStmt->execute([$currentUserId]);
+            $userExists = (int) $userStmt->fetchColumn() > 0;
+            if (!$userExists) {
+                return ['valid' => false, 'error' => "Biezacy uzytkownik nie istnieje w docelowej bazie."];
+            }
+        }
+
+        return ['valid' => true, 'error' => null];
+    } catch (Throwable $e) {
+        return ['valid' => false, 'error' => 'Blad polaczenia: ' . $e->getMessage()];
+    }
 }
 
 function cms_is_installed(): bool

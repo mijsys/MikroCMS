@@ -95,6 +95,92 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             cms_redirect(cms_url('admin/settings.php'));
         }
 
+        if ($action === 'db_engine_switch_unlock') {
+            if (!$user || empty($user['id'])) {
+                throw new RuntimeException('Nie mozna zaladowac uzytkownika.');
+            }
+            $fresh = $loadUserById((int) $user['id']);
+            if (!$fresh) {
+                throw new RuntimeException('Nie mozna zaladowac danych uzytkownika.');
+            }
+            $password = trim((string) ($_POST['db_switch_password'] ?? ''));
+            $totpCode = trim((string) ($_POST['db_switch_totp_code'] ?? ''));
+            $mijauthFile = trim((string) ($_POST['db_switch_mijauth_file'] ?? ''));
+            
+            if ($password === '') {
+                throw new RuntimeException('Podaj haslo administratora.');
+            }
+            if (!cms_authenticate_credentials($fresh['username'] ?? '', $password)) {
+                throw new RuntimeException('Haslo jest niepoprawne.');
+            }
+            if (!cms_user_has_2fa($fresh)) {
+                throw new RuntimeException('2FA nie jest aktywne dla tego uzytkownika. Aktywuj 2FA aby zmieniac silnik bazy danych.');
+            }
+            if ($totpCode === '' || $mijauthFile === '') {
+                throw new RuntimeException('Podaj kod TOTP oraz zawartosc pliku .mijauth.');
+            }
+            if (!cms_verify_user_2fa_challenge($fresh, $totpCode, $mijauthFile)) {
+                throw new RuntimeException('Weryfikacja 2FA nie powiodla sie.');
+            }
+            
+            cms_session_start();
+            $_SESSION['cms_db_switch_verified'] = true;
+            $_SESSION['cms_db_switch_verified_at'] = time();
+            cms_flash('success', 'Weryfikacja 2FA przeszla pomyslnie. Mozesz teraz zmieniac silnik bazy danych.');
+            cms_redirect(cms_url('admin/settings.php?tab=database'));
+        }
+        
+        if ($action === 'db_engine_switch_execute') {
+            if (!$user || empty($user['id'])) {
+                throw new RuntimeException('Nie mozna zaladowac uzytkownika.');
+            }
+            
+            cms_session_start();
+            $verified = !empty($_SESSION['cms_db_switch_verified']) && is_int($_SESSION['cms_db_switch_verified_at']) && (time() - $_SESSION['cms_db_switch_verified_at']) < 600;
+            if (!$verified) {
+                throw new RuntimeException('Musisz najpierw zweryfikowac sie za pomoca 2FA.');
+            }
+            
+            $newDriver = trim((string) ($_POST['db_new_driver'] ?? ''));
+            $currentDriver = cms_db_driver();
+            if ($newDriver !== 'mysql' && $newDriver !== 'sqlite') {
+                throw new RuntimeException('Nieznany driver.');
+            }
+            if ($newDriver === $currentDriver) {
+                throw new RuntimeException('Nowy driver jest taki sam jak obecny.');
+            }
+            
+            $currentConfig = cms_load_config();
+            $newConfig = $currentConfig;
+            $newConfig['driver'] = $newDriver;
+            
+            if ($newDriver === 'mysql') {
+                $newConfig['mysql_host'] = trim((string) ($_POST['mysql_host'] ?? '127.0.0.1')) ?: '127.0.0.1';
+                $newConfig['mysql_port'] = trim((string) ($_POST['mysql_port'] ?? '3306')) ?: '3306';
+                $newConfig['mysql_database'] = trim((string) ($_POST['mysql_database'] ?? ''));
+                $newConfig['mysql_username'] = trim((string) ($_POST['mysql_username'] ?? ''));
+                $newConfig['mysql_password'] = (string) ($_POST['mysql_password'] ?? '');
+                $newConfig['mysql_charset'] = trim((string) ($_POST['mysql_charset'] ?? 'utf8mb4')) ?: 'utf8mb4';
+                
+                if ($newConfig['mysql_database'] === '' || $newConfig['mysql_username'] === '') {
+                    throw new RuntimeException('Brakuje wymaganych parametrow MySQL.');
+                }
+            }
+            
+            $validation = cms_validate_target_database($newDriver, $newConfig, (int) $user['id']);
+            if (!$validation['valid']) {
+                throw new RuntimeException($validation['error'] ?? 'Walidacja bazy danych nie powiodla sie.');
+            }
+            
+            cms_write_config($newConfig);
+            cms_db(true);
+            
+            unset($_SESSION['cms_db_switch_verified']);
+            unset($_SESSION['cms_db_switch_verified_at']);
+            cms_flash('success', 'Silnik bazy danych zmieniony pomyslnie na: ' . htmlspecialchars($newDriver));
+            cms_redirect(cms_url('admin/settings.php?tab=database'));
+        }
+        
         if ($action === 'save_translations') {
             $translationLang = cms_normalize_lang_code((string) ($_POST['translation_lang'] ?? 'en'), 'en');
             $translationsJson = (string) ($_POST['translations_json'] ?? '{}');
@@ -202,21 +288,30 @@ $adminTheme = cms_admin_theme($user);
     <title><?= htmlspecialchars(cms_t('admin.settings.title', 'Ustawienia CMS')) ?></title>
     <link rel="stylesheet" href="<?= htmlspecialchars(cms_url('admin/assets/dashboard.css')) ?>">
     <style>
+        .settings-workbench {
+            display: grid;
+            grid-template-columns: 240px minmax(0, 1fr);
+            gap: 16px;
+            align-items: start;
+            min-height: calc(100vh - 190px);
+        }
         .settings-tabs {
-            display: flex;
+            display: grid;
             gap: 8px;
-            margin-bottom: 14px;
-            flex-wrap: wrap;
+            position: sticky;
+            top: 16px;
         }
         .settings-tab-btn {
             border: 1px solid #334155;
             background: #0f172a;
             color: #cbd5e1;
             border-radius: 10px;
-            padding: 8px 14px;
+            padding: 12px 14px;
             font-size: 13px;
             font-weight: 700;
             cursor: pointer;
+            text-align: left;
+            width: 100%;
         }
         .settings-tab-btn.active {
             background: #2563eb;
@@ -228,6 +323,22 @@ $adminTheme = cms_admin_theme($user);
         }
         .settings-grid {
             display: block;
+        }
+        .settings-grid .panel {
+            min-height: calc(100vh - 220px);
+        }
+        @media (max-width: 980px) {
+            .settings-workbench {
+                grid-template-columns: 1fr;
+                min-height: auto;
+            }
+            .settings-tabs {
+                position: static;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .settings-grid .panel {
+                min-height: auto;
+            }
         }
     </style>
 </head>
@@ -252,11 +363,12 @@ $adminTheme = cms_admin_theme($user);
 
         <?php if ($flash): ?><div class="flash <?= htmlspecialchars($flash['type']) ?>"><?= htmlspecialchars($flash['message']) ?></div><?php endif; ?>
 
+        <div class="settings-workbench">
         <div class="settings-tabs" id="settingsTabs" role="tablist" aria-label="Sekcje ustawien">
-            <button type="button" class="settings-tab-btn active" data-settings-tab="general" role="tab" aria-selected="true">Ogolne</button>
+            <button type="button" class="settings-tab-btn active" data-settings-tab="general" role="tab" aria-selected="true">Ustawienia ogolne</button>
             <button type="button" class="settings-tab-btn" data-settings-tab="data" role="tab" aria-selected="false">Warstwa danych</button>
-            <button type="button" class="settings-tab-btn" data-settings-tab="security" role="tab" aria-selected="false">Bezpieczenstwo / 2FA</button>
-            <button type="button" class="settings-tab-btn" data-settings-tab="translations" role="tab" aria-selected="false">Tlumaczenia</button>
+            <button type="button" class="settings-tab-btn" data-settings-tab="security" role="tab" aria-selected="false">Bezpieczenstwo i 2FA</button>
+            <button type="button" class="settings-tab-btn" data-settings-tab="translations" role="tab" aria-selected="false">Tlumaczenia UI</button>
         </div>
 
         <div class="grid settings-grid">
@@ -389,6 +501,7 @@ $adminTheme = cms_admin_theme($user);
                     </form>
                 </section>
             </div>
+        </div>
         </div>
     </main>
 </div>

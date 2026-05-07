@@ -63,9 +63,10 @@
 - Lepsza organizacja sekcji: General, Data, Security, Translations z widokiem pełnego ekranu dla każdej.
 
 ### 1.1.8.2 - DB Engine Switch (Admin)
-- Przelaczanie silnika bazy danych miedzy MySQL i SQLite z poziomu panelu admin.
-- Sekcja zabezpieczona dodatkowo: haslo + 2FA (TOTP + plik .mijauth) przed odblokowaniem akcji.
-- Walidacja bezpieczenstwa przed przelaczeniem: docelowa baza musi zawierac tabele CMS i aktualnego admina.
+- Nowa sekcja "Baza danych" w panelu ustawien administratora.
+- Zmiana silnika bazy miedzy MySQL i SQLite z automatycznym update-em config.php.
+- Wymaga weryfikacji za pomoca hasla + 2FA (kod TOTP + plik .mijauth) - sesja 10 minut.
+- Walidacja docelowej bazy: sprawdzenie czy sa tabele CMS i czy istnieje aktualny uzytkownik.
 
 ### 1.1.9 - Responsywność strony admina jak i dla użytkownika, pluginy i wszystko musi współgrać
    - responsywność
