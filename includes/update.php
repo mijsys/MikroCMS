@@ -4,7 +4,7 @@ declare(strict_types=1);
 const CMS_DEFAULT_UPDATE_MANIFEST_URL = 'https://raw.githubusercontent.com/mijsys/MikroCMS/main/updates/cms-update.json';
 const CMS_DEFAULT_STORE_MANIFEST_URL = 'https://raw.githubusercontent.com/mijsys/MikroCMS/main/updates/store-db.json';
 const CMS_DEFAULT_PLUGIN_MANIFEST_URL = 'https://raw.githubusercontent.com/mijsys/MikroCMS/main/updates/plugins.json';
-const CMS_CODE_VERSION = '1.1.7.2';
+const CMS_CODE_VERSION = '1.1.7.3';
 
 function cms_sanitize_remote_manifest_url(string $url): string
 {

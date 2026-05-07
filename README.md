@@ -40,6 +40,16 @@
 - Navigator stron z miniaturami oraz duplikowaniem calej strony jednym kliknieciem.
 - Duplikacja strony kopiuje tresc, layout, tlumaczenia i plugin placements.
 
+### 1.1.7.3 - DnD Studio Layout
+- Przebudowa buildera na uklad studia: lewy panel komponentow, centralny canvas/live preview, prawa kolumna inspektora.
+- Przeciagnij i upusc bezposrednio na canvas z czytelnym stanem drop.
+- Lepszy workflow drag and drop: wybierz element, upusc, konfiguruj i od razu widz wynik.
+
+### 1.1.7.4 - DnD UX Polish (Start)
+- Inline toolbar na sekcji (duplikuj/usun/przesun) bez wchodzenia do listy.
+- Uchwyt przeciagania sekcji bezposrednio w live preview.
+- Snapowane strefy drop miedzy sekcjami (gora/dol) dla szybszego ukladu.
+
 ### 1.1.8 - DB Engine Switch (Admin)
 - Przelaczanie silnika bazy danych miedzy MySQL i SQLite z poziomu panelu admin.
 - Sekcja zabezpieczona dodatkowo: haslo + 2FA (TOTP + plik .mijauth) przed odblokowaniem akcji.
