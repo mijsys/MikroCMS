@@ -12,3 +12,20 @@
 .builder-container-item p{margin:0;color:#475569;}
 .builder-container-image{width:100%;height:140px;object-fit:cover;border-radius:10px;margin-bottom:10px;}
 .builder-plugin-slot{padding:8px 0;}
+
+.builder-block.builder-theme-default{--builder-ink:#0f172a;--builder-sub:#334155;}
+.builder-block.builder-theme-ocean{--builder-ink:#05293f;--builder-sub:#0f4b73;}
+.builder-block.builder-theme-sunset{--builder-ink:#3b1230;--builder-sub:#6d264e;}
+.builder-block.builder-theme-forest{--builder-ink:#123724;--builder-sub:#1f5d3e;}
+.builder-block.builder-theme-mono{--builder-ink:#111827;--builder-sub:#374151;}
+
+.builder-block h2{color:var(--builder-ink,#0f172a);}
+.builder-block .builder-text{color:var(--builder-sub,#334155);}
+
+.builder-block.builder-typo-sm .builder-inner{font-size:.94rem;}
+.builder-block.builder-typo-sm h2{font-size:clamp(1.45rem,3.2vw,2.2rem);}
+.builder-block.builder-typo-md .builder-inner{font-size:1rem;}
+.builder-block.builder-typo-lg .builder-inner{font-size:1.08rem;}
+.builder-block.builder-typo-lg h2{font-size:clamp(2rem,4.4vw,3.2rem);}
+.builder-block.builder-typo-xl .builder-inner{font-size:1.16rem;}
+.builder-block.builder-typo-xl h2{font-size:clamp(2.2rem,4.8vw,3.6rem);}

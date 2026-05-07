@@ -34,6 +34,12 @@
 - Przelacznik trybu prosty/zaawansowany dla bardziej technicznej edycji.
 - Uproszczony canvas i instrukcja krok po kroku dla edytora stron.
 
+### 1.1.7.2 - Landing Templates + Section Styles + Page Navigator
+- Dwa pelne szablony landing page: Landing Classic i Landing Product.
+- Panel stylow sekcji: motywy kolorow + skala typografii dla kazdej sekcji.
+- Navigator stron z miniaturami oraz duplikowaniem calej strony jednym kliknieciem.
+- Duplikacja strony kopiuje tresc, layout, tlumaczenia i plugin placements.
+
 ### 1.1.8 - DB Engine Switch (Admin)
 - Przelaczanie silnika bazy danych miedzy MySQL i SQLite z poziomu panelu admin.
 - Sekcja zabezpieczona dodatkowo: haslo + 2FA (TOTP + plik .mijauth) przed odblokowaniem akcji.

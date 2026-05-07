@@ -66,6 +66,8 @@
             container_columns: '2',
             container_items_json: '[\n  {"title":"Karta 1","text":"Opis elementu"},\n  {"title":"Karta 2","text":"Opis elementu"}\n]',
             plugin_slug: '',
+            section_theme: 'default',
+            typography_scale: 'md',
             layout_x: '0',
             layout_y: '0',
             layout_w: '12',
@@ -111,6 +113,18 @@
                 '</select></div>' +
                 '<div><label>Tytul</label><input type="text" data-field="title" value="' + esc(block.title) + '"></div>' +
                 '<div><label>Minimalna wysokosc</label><input type="number" min="200" max="1200" step="10" data-field="min_height" value="' + esc(block.min_height) + '"></div>' +
+                '<div><label>Motyw sekcji</label><select data-field="section_theme"><option value="default">Default</option><option value="ocean">Ocean</option><option value="sunset">Sunset</option><option value="forest">Forest</option><option value="mono">Mono</option></select></div>' +
+                '<div><label>Skala typografii</label><select data-field="typography_scale"><option value="sm">Small</option><option value="md">Medium</option><option value="lg">Large</option><option value="xl">Extra Large</option></select></div>' +
+                '<div class="full builder-style-presets">' +
+                    '<label>Style sekcji</label>' +
+                    '<div class="builder-style-preset-row">' +
+                        '<button type="button" class="btn ghost" data-style-theme-preset="default">Clean</button>' +
+                        '<button type="button" class="btn ghost" data-style-theme-preset="ocean">Ocean</button>' +
+                        '<button type="button" class="btn ghost" data-style-theme-preset="sunset">Sunset</button>' +
+                        '<button type="button" class="btn ghost" data-style-theme-preset="forest">Forest</button>' +
+                        '<button type="button" class="btn ghost" data-style-theme-preset="mono">Mono</button>' +
+                    '</div>' +
+                '</div>' +
                 '<div class="full builder-layout-simple"><label>Szerokosc sekcji</label><div class="builder-size-presets">' +
                     '<button type="button" class="btn ghost" data-size-preset="12">Pelna</button>' +
                     '<button type="button" class="btn ghost" data-size-preset="8">2/3</button>' +
@@ -147,6 +161,8 @@
         item.querySelector('[data-field="align"]').value = block.align;
         item.querySelector('[data-field="background_attachment"]').value = block.background_attachment;
         item.querySelector('[data-field="container_columns"]').value = String(block.container_columns || '2');
+        item.querySelector('[data-field="section_theme"]').value = String(block.section_theme || 'default');
+        item.querySelector('[data-field="typography_scale"]').value = String(block.typography_scale || 'md');
 
         bindItem(item);
         return item;
@@ -710,6 +726,144 @@
         return [];
     }
 
+    function pageTemplateBlocks(template) {
+        if (template === 'landing_classic') {
+            return [
+                {
+                    type: 'hero',
+                    title: 'Zbuduj nowoczesna strone w 1 dzien',
+                    text: 'MikroCMS to szybki website builder dla landing page. Uruchom projekt i skaluj sprzedaz.',
+                    button_text: 'Rozpocznij teraz',
+                    button_url: '#kontakt',
+                    align: 'left',
+                    background_color: '#e7f3ff',
+                    section_theme: 'ocean',
+                    typography_scale: 'xl',
+                    layout_w: '12',
+                    layout_h: '3'
+                },
+                {
+                    type: 'container',
+                    title: 'Features',
+                    text: 'Najwazniejsze funkcje gotowe do uzycia od razu.',
+                    container_columns: '3',
+                    container_items_json: '[{"title":"Edycja wizualna","text":"Tworz i zmieniaj sekcje metoda drag and drop."},{"title":"Szybkie szablony","text":"Buduj landing page na gotowych ukladach."},{"title":"SEO ready","text":"Meta title, opis i przyjazne URL."}]',
+                    section_theme: 'default',
+                    typography_scale: 'md',
+                    background_color: '#f8fbff',
+                    layout_w: '12',
+                    layout_h: '4'
+                },
+                {
+                    type: 'container',
+                    title: 'Testimonials',
+                    text: 'Opinie klientow, ktorzy wdrozyli strony na MikroCMS.',
+                    container_columns: '2',
+                    container_items_json: '[{"title":"Anna, e-commerce","text":"Po wdrozeniu landing page konwersja wzrosla o 34%."},{"title":"Marek, agencja","text":"Szybko tworzymy strony dla klientow i latwo je rozwijamy."}]',
+                    section_theme: 'sunset',
+                    typography_scale: 'md',
+                    background_color: '#fff0f6',
+                    layout_w: '12',
+                    layout_h: '3'
+                },
+                {
+                    type: 'container',
+                    title: 'FAQ',
+                    text: 'Najczestsze pytania przed startem projektu.',
+                    container_columns: '1',
+                    container_items_json: '[{"title":"Czy potrzebuje programisty?","text":"Nie, podstawowy landing page zrobisz samodzielnie."},{"title":"Czy moge importowac layout?","text":"Tak, builder obsluguje import i eksport JSON."}]',
+                    section_theme: 'mono',
+                    typography_scale: 'md',
+                    background_color: '#f3f4f6',
+                    layout_w: '12',
+                    layout_h: '3'
+                },
+                {
+                    type: 'hero',
+                    title: 'Gotowy na start?',
+                    text: 'Umow krotka rozmowe i uruchom swoj nowy landing page.',
+                    button_text: 'Skontaktuj sie',
+                    button_url: '#kontakt',
+                    align: 'center',
+                    section_theme: 'forest',
+                    typography_scale: 'lg',
+                    background_color: '#eaf9ef',
+                    layout_w: '12',
+                    layout_h: '3'
+                }
+            ];
+        }
+
+        if (template === 'landing_product') {
+            return [
+                {
+                    type: 'hero',
+                    title: 'Premiera nowego produktu',
+                    text: 'Pokaz wartosc produktu i zamien odwiedzajacych w klientow.',
+                    button_text: 'Kup teraz',
+                    button_url: '#oferta',
+                    align: 'center',
+                    section_theme: 'sunset',
+                    typography_scale: 'xl',
+                    background_color: '#ffeef6',
+                    layout_w: '12',
+                    layout_h: '3'
+                },
+                {
+                    type: 'image',
+                    title: 'Zobacz produkt',
+                    text: 'Zdjecie hero produktu z krotkim opisem.',
+                    image_url: 'https://images.unsplash.com/photo-1517336714739-489689fd1ca8',
+                    image_alt: 'Produkt',
+                    section_theme: 'default',
+                    typography_scale: 'md',
+                    background_color: '#f7fafc',
+                    layout_w: '12',
+                    layout_h: '4'
+                },
+                {
+                    type: 'container',
+                    title: 'Kluczowe korzysci',
+                    text: 'Dlaczego ten produkt rozwiazuje problem szybciej i skuteczniej.',
+                    container_columns: '3',
+                    container_items_json: '[{"title":"Szybkie wdrozenie","text":"Start nawet tego samego dnia."},{"title":"Intuicyjny panel","text":"Obsluga bez szkolenia."},{"title":"Skalowalnosc","text":"Rozwijaj strone razem z biznesem."}]',
+                    section_theme: 'ocean',
+                    typography_scale: 'md',
+                    background_color: '#e8f5ff',
+                    layout_w: '12',
+                    layout_h: '4'
+                },
+                {
+                    type: 'container',
+                    title: 'Testimonials',
+                    text: 'Opinie uzytkownikow po wdrozeniu.',
+                    container_columns: '2',
+                    container_items_json: '[{"title":"Karolina","text":"W 2 tygodnie zwiekszylismy leady o 42%."},{"title":"Tomasz","text":"Najprostszy system, na jakim pracowalismy."}]',
+                    section_theme: 'forest',
+                    typography_scale: 'md',
+                    background_color: '#ebf8f0',
+                    layout_w: '12',
+                    layout_h: '3'
+                },
+                {
+                    type: 'hero',
+                    title: 'Gotowe? Wlacz kampanie',
+                    text: 'Przetestuj szablon, dopracuj szczegoly i publikuj landing.',
+                    button_text: 'Wlacz teraz',
+                    button_url: '#kontakt',
+                    align: 'center',
+                    section_theme: 'mono',
+                    typography_scale: 'lg',
+                    background_color: '#eef2f7',
+                    layout_w: '12',
+                    layout_h: '3'
+                }
+            ];
+        }
+
+        return [];
+    }
+
     function updateHistoryButtons() {
         var undoBtn = document.getElementById('builderUndoBtn');
         var redoBtn = document.getElementById('builderRedoBtn');
@@ -886,6 +1040,8 @@
             var section = document.createElement('section');
             section.className = 'builder-live-section builder-live-' + type;
             section.setAttribute('data-live-index', String(idx));
+            section.classList.add('builder-live-theme-' + String(block.section_theme || 'default'));
+            section.classList.add('builder-live-typo-' + String(block.typography_scale || 'md'));
             section.style.minHeight = Math.min(minHeight, 480) + 'px';
             section.style.textAlign = align;
             section.style.backgroundColor = bgColor;
@@ -1255,6 +1411,37 @@
             });
         });
 
+        item.querySelectorAll('[data-style-theme-preset]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var theme = String(btn.getAttribute('data-style-theme-preset') || 'default');
+                var themeField = item.querySelector('[data-field="section_theme"]');
+                var bgField = item.querySelector('[data-field="background_color"]');
+                var typoField = item.querySelector('[data-field="typography_scale"]');
+                if (!themeField || !bgField || !typoField) {
+                    return;
+                }
+                var bgByTheme = {
+                    'default': '#ffffff',
+                    'ocean': '#e8f5ff',
+                    'sunset': '#ffeef6',
+                    'forest': '#eaf9ef',
+                    'mono': '#eef2f7'
+                };
+                var typoByTheme = {
+                    'default': 'md',
+                    'ocean': 'lg',
+                    'sunset': 'lg',
+                    'forest': 'md',
+                    'mono': 'sm'
+                };
+                themeField.value = theme;
+                bgField.value = bgByTheme[theme] || '#ffffff';
+                typoField.value = typoByTheme[theme] || 'md';
+                updatePreview();
+                sync();
+            });
+        });
+
         var resizeHandle = item.querySelector('[data-resize-handle]');
         if (resizeHandle && minHeightField) {
             resizeHandle.addEventListener('mousedown', function (ev) {
@@ -1398,6 +1585,39 @@
             renderEmpty();
             sync();
             setSelectedIndex(list.querySelectorAll('.builder-item').length - 1);
+        });
+    });
+
+    document.querySelectorAll('[data-builder2-template]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var template = btn.getAttribute('data-builder2-template') || '';
+            var blocks = pageTemplateBlocks(template);
+            if (!blocks.length) {
+                return;
+            }
+
+            if (list.querySelector('.builder-item')) {
+                var shouldReplace = confirm('Szablon strony zastapi aktualny uklad. Kontynuowac?'); // eslint-disable-line no-alert
+                if (!shouldReplace) {
+                    return;
+                }
+            }
+
+            list.innerHTML = '';
+            blocks.forEach(function (block) {
+                list.appendChild(makeItem(block.type || 'text', block));
+            });
+            var titleInput = document.querySelector('#pageEditorForm [name="title"]');
+            var excerptInput = document.querySelector('#pageEditorForm [name="excerpt"]');
+            if (titleInput && !String(titleInput.value || '').trim()) {
+                titleInput.value = template === 'landing_product' ? 'Landing Product' : 'Landing Classic';
+            }
+            if (excerptInput && !String(excerptInput.value || '').trim()) {
+                excerptInput.value = 'Strona wygenerowana z gotowego szablonu landing page.';
+            }
+            renderEmpty();
+            sync();
+            setSelectedIndex(0);
         });
     });
 

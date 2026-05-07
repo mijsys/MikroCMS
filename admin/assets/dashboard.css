@@ -1179,6 +1179,42 @@ body:not(.builder-mode-advanced) .builder-canvas-item:active {
 	box-shadow: none;
 }
 
+.builder-live-theme-default {
+	color: #1a3650;
+}
+
+.builder-live-theme-ocean {
+	color: #0f3f61;
+}
+
+.builder-live-theme-sunset {
+	color: #5d2247;
+}
+
+.builder-live-theme-forest {
+	color: #1a5134;
+}
+
+.builder-live-theme-mono {
+	color: #1f2937;
+}
+
+.builder-live-typo-sm .builder-live-inner {
+	font-size: 12px;
+}
+
+.builder-live-typo-md .builder-live-inner {
+	font-size: 13px;
+}
+
+.builder-live-typo-lg .builder-live-inner {
+	font-size: 14px;
+}
+
+.builder-live-typo-xl .builder-live-inner {
+	font-size: 15px;
+}
+
 .builder-item-focus {
 	box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 72%, transparent), 0 14px 30px color-mix(in srgb, var(--panel-shadow) 78%, transparent);
 	transition: box-shadow 0.2s ease;
@@ -1290,6 +1326,24 @@ body:not(.builder-mode-advanced) .builder-canvas-item:active {
 
 .builder-size-presets .btn {
 	padding: 8px 11px;
+	font-size: 12px;
+}
+
+.builder-style-presets {
+	padding: 10px;
+	border: 1px dashed color-mix(in srgb, var(--accent) 48%, var(--panel-border));
+	border-radius: 12px;
+	background: color-mix(in srgb, var(--panel-soft) 62%, transparent);
+}
+
+.builder-style-preset-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.builder-style-preset-row .btn {
+	padding: 7px 10px;
 	font-size: 12px;
 }
 
@@ -1904,6 +1958,10 @@ body.builder-window-open {
 
 @media (max-width: 1100px) {
 	.builder-quick-guide {
+		grid-template-columns: 1fr;
+	}
+
+	.page-navigator-grid {
 		grid-template-columns: 1fr;
 	}
 

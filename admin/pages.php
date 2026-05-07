@@ -46,6 +46,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 cms_delete_page((int) ($_POST['page_id'] ?? 0));
                 cms_flash('success', cms_t('admin.pages.flash.deleted', 'Strona zostala usunieta.'));
                 break;
+            case 'duplicate_page':
+                $sourcePageId = (int) ($_POST['source_page_id'] ?? 0);
+                $sourceStmt = $db->prepare('SELECT * FROM cms_pages WHERE id = ? LIMIT 1');
+                $sourceStmt->execute([$sourcePageId]);
+                $sourcePage = $sourceStmt->fetch();
+                if (!is_array($sourcePage)) {
+                    throw new RuntimeException('Nie znaleziono strony do duplikacji.');
+                }
+
+                $copySlugBase = cms_slugify((string) ($sourcePage['slug'] ?? 'strona') . '-copy');
+                $copySlug = $copySlugBase;
+                $slugCounter = 2;
+                while (true) {
+                    $slugCheck = $db->prepare('SELECT id FROM cms_pages WHERE slug = ? LIMIT 1');
+                    $slugCheck->execute([$copySlug]);
+                    if (!$slugCheck->fetch()) {
+                        break;
+                    }
+                    $copySlug = $copySlugBase . '-' . $slugCounter;
+                    $slugCounter += 1;
+                    if ($slugCounter > 200) {
+                        throw new RuntimeException('Nie mozna wygenerowac unikalnego slug dla kopii strony.');
+                    }
+                }
+
+                $copyPayload = [
+                    'parent_id' => $sourcePage['parent_id'] ?? null,
+                    'title' => trim((string) ($sourcePage['title'] ?? '')) . ' (kopia)',
+                    'slug' => $copySlug,
+                    'excerpt' => (string) ($sourcePage['excerpt'] ?? ''),
+                    'content' => (string) ($sourcePage['content'] ?? ''),
+                    'meta_title' => (string) ($sourcePage['meta_title'] ?? ''),
+                    'meta_description' => (string) ($sourcePage['meta_description'] ?? ''),
+                    'builder_data' => (string) ($sourcePage['builder_data'] ?? '[]'),
+                    'status' => 'draft',
+                    'is_homepage' => 0,
+                    'sort_order' => (int) ($sourcePage['sort_order'] ?? 0),
+                    'template' => (string) ($sourcePage['template'] ?? 'default'),
+                ];
+                $duplicatedPageId = cms_save_page($copyPayload, null);
+
+                $translationStmt = $db->prepare('SELECT lang, title, excerpt, content, builder_data FROM cms_page_translations WHERE page_id = ?');
+                $translationStmt->execute([$sourcePageId]);
+                foreach ($translationStmt->fetchAll() ?: [] as $translationRow) {
+                    if (!is_array($translationRow)) {
+                        continue;
+                    }
+                    cms_save_page_translation($duplicatedPageId, (string) ($translationRow['lang'] ?? ''), [
+                        'title' => (string) ($translationRow['title'] ?? ''),
+                        'excerpt' => (string) ($translationRow['excerpt'] ?? ''),
+                        'content' => (string) ($translationRow['content'] ?? ''),
+                        'builder_data' => (string) ($translationRow['builder_data'] ?? '[]'),
+                    ]);
+                }
+
+                try {
+                    $placementRead = $db->prepare('SELECT plugin_slug, position, sort_order FROM cms_plugin_placements WHERE page_id = ? ORDER BY sort_order ASC, id ASC');
+                    $placementRead->execute([$sourcePageId]);
+                    $placements = $placementRead->fetchAll() ?: [];
+                    if ($placements !== []) {
+                        $placementWrite = $db->prepare('INSERT INTO cms_plugin_placements (page_id, plugin_slug, position, sort_order) VALUES (?, ?, ?, ?)');
+                        foreach ($placements as $placement) {
+                            if (!is_array($placement)) {
+                                continue;
+                            }
+                            $placementWrite->execute([
+                                $duplicatedPageId,
+                                (string) ($placement['plugin_slug'] ?? ''),
+                                (string) ($placement['position'] ?? 'after_content'),
+                                (int) ($placement['sort_order'] ?? 0),
+                            ]);
+                        }
+                    }
+                } catch (Throwable $e) {
+                    // Table may not exist in older schemas; ignore gracefully.
+                }
+
+                $redirectEditId = $duplicatedPageId;
+                cms_flash('success', cms_t('admin.pages.flash.duplicated', 'Utworzono kopie strony.'));
+                break;
         }
     } catch (Throwable $e) {
         cms_flash('error', $e->getMessage());
@@ -268,6 +348,9 @@ $adminTheme = cms_admin_theme($user);
                                 <button class="btn secondary" type="button" data-builder2-preset="cta">Preset: CTA</button>
                                 <button class="btn secondary" type="button" data-builder2-preset="gallery">Preset: Gallery</button>
                                 <button class="btn secondary" type="button" data-builder2-preset="pricing">Preset: Pricing</button>
+                                <span class="builder-toolbar-separator" aria-hidden="true"></span>
+                                <button class="btn secondary" type="button" data-builder2-template="landing_classic">Szablon: Landing Classic</button>
+                                <button class="btn secondary" type="button" data-builder2-template="landing_product">Szablon: Landing Product</button>
                                 <button class="btn secondary" type="button" id="builderUndoBtn" disabled>Undo</button>
                                 <button class="btn secondary" type="button" id="builderRedoBtn" disabled>Redo</button>
                                 <button class="btn secondary" type="button" id="builderAutoLayoutBtn">Auto-uklad</button>
@@ -312,6 +395,38 @@ $adminTheme = cms_admin_theme($user);
             </div>
 
             <div class="stack">
+                <section class="panel">
+                    <h2>Navigator stron</h2>
+                    <div class="page-navigator-grid">
+                        <?php foreach ($pages as $navPage): ?>
+                            <?php
+                            $navBlocks = cms_normalize_builder_blocks($navPage['builder_data'] ?? '[]');
+                            $thumbBlock = $navBlocks[0] ?? [];
+                            $thumbColor = (string) ($thumbBlock['background_color'] ?? '#e2ebf6');
+                            $thumbType = strtoupper((string) ($thumbBlock['type'] ?? 'TEXT'));
+                            ?>
+                            <article class="page-nav-card">
+                                <a class="page-nav-thumb" href="<?= htmlspecialchars(cms_url('admin/pages.php?edit=' . (int) $navPage['id'] . '&lang=' . rawurlencode($editorLang))) ?>" style="background:<?= htmlspecialchars($thumbColor) ?>">
+                                    <span><?= htmlspecialchars($thumbType) ?></span>
+                                </a>
+                                <div class="page-nav-meta">
+                                    <strong><?= htmlspecialchars((string) ($navPage['title'] ?? 'Bez tytulu')) ?></strong>
+                                    <span><?= htmlspecialchars((string) ($navPage['slug'] ?? '')) ?></span>
+                                </div>
+                                <div class="page-nav-actions">
+                                    <a class="btn secondary" href="<?= htmlspecialchars(cms_url('admin/pages.php?edit=' . (int) $navPage['id'] . '&lang=' . rawurlencode($editorLang))) ?>">Edytuj</a>
+                                    <form method="post">
+                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(cms_csrf_token()) ?>">
+                                        <input type="hidden" name="action" value="duplicate_page">
+                                        <input type="hidden" name="source_page_id" value="<?= (int) $navPage['id'] ?>">
+                                        <button class="btn ghost" type="submit">Duplikuj</button>
+                                    </form>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+
                 <?php if ($editPage): ?>
                 <section class="panel">
                     <h2><?= htmlspecialchars(cms_t('admin.pages.revisions.heading', 'Historia zmian strony')) ?></h2>

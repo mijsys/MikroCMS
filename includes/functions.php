@@ -684,6 +684,8 @@ function cms_builder_block_defaults(string $type = 'text'): array
         'container_columns' => '2',
         'container_items_json' => "[\n  {\"title\":\"Karta 1\",\"text\":\"Opis elementu\"},\n  {\"title\":\"Karta 2\",\"text\":\"Opis elementu\"}\n]",
         'plugin_slug' => '',
+        'section_theme' => 'default',
+        'typography_scale' => 'md',
         'layout_x' => '0',
         'layout_y' => '0',
         'layout_w' => '12',
@@ -753,6 +755,12 @@ function cms_normalize_builder_blocks(mixed $input): array
         $block['container_items_json'] = json_encode($normalizedItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $pluginSlug = trim((string) ($item['plugin_slug'] ?? ''));
         $block['plugin_slug'] = preg_match('/^[a-z0-9\-]+$/', $pluginSlug) ? $pluginSlug : '';
+        $sectionTheme = trim((string) ($item['section_theme'] ?? 'default'));
+        $allowedThemes = ['default', 'ocean', 'sunset', 'forest', 'mono'];
+        $block['section_theme'] = in_array($sectionTheme, $allowedThemes, true) ? $sectionTheme : 'default';
+        $typographyScale = trim((string) ($item['typography_scale'] ?? 'md'));
+        $allowedScales = ['sm', 'md', 'lg', 'xl'];
+        $block['typography_scale'] = in_array($typographyScale, $allowedScales, true) ? $typographyScale : 'md';
         $block['layout_x'] = (string) max(0, min(11, (int) ($item['layout_x'] ?? 0)));
         $block['layout_y'] = (string) max(0, min(200, (int) ($item['layout_y'] ?? 0)));
         $block['layout_w'] = (string) max(1, min(12, (int) ($item['layout_w'] ?? 12)));
@@ -785,7 +793,7 @@ function cms_render_builder_blocks(array $page): string
         }
         $styleAttr = implode(';', $styles);
         ?>
-        <section class="builder-block builder-block-<?= htmlspecialchars($block['type']) ?> align-<?= htmlspecialchars($block['align']) ?>" style="<?= $styleAttr ?>">
+        <section class="builder-block builder-block-<?= htmlspecialchars($block['type']) ?> align-<?= htmlspecialchars($block['align']) ?> builder-theme-<?= htmlspecialchars((string) ($block['section_theme'] ?? 'default')) ?> builder-typo-<?= htmlspecialchars((string) ($block['typography_scale'] ?? 'md')) ?>" style="<?= $styleAttr ?>">
             <div class="builder-inner">
                 <?php if ($block['type'] === 'image' && $block['image_url'] !== ''): ?>
                     <div class="builder-image-wrap">
