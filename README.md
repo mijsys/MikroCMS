@@ -56,7 +56,13 @@
 - Upload obrazow z panelu admin i aktualizacja renderowania blokow.
 - Naprawa strony ustawien: usuniecie rozjazdu i dodanie zakladek sekcji.
 
-### 1.1.8 - DB Engine Switch (Admin)
+### 1.1.8.1 - Settings Workbench UI
+- Konwersja ustawien z poziomego paska zakladek na pełnoekranowy layout workbench.
+- Lewy panel z zakladkami (240px sticky) + duża przestrzeń zawartości obok.
+- Responsywny design z fallback'iem do 1-kolumnowego na mniejszych ekranach.
+- Lepsza organizacja sekcji: General, Data, Security, Translations z widokiem pełnego ekranu dla każdej.
+
+### 1.1.8.2 - DB Engine Switch (Admin)
 - Przelaczanie silnika bazy danych miedzy MySQL i SQLite z poziomu panelu admin.
 - Sekcja zabezpieczona dodatkowo: haslo + 2FA (TOTP + plik .mijauth) przed odblokowaniem akcji.
 - Walidacja bezpieczenstwa przed przelaczeniem: docelowa baza musi zawierac tabele CMS i aktualnego admina.

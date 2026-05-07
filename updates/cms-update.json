@@ -1,11 +1,11 @@
 {
   "name": "MikroCMS Core",
   "channel": "stable",
-  "latest_version": "1.1.7.8",
+  "latest_version": "1.1.8.1",
   "published_at": "2026-05-07T00:00:00Z",
   "changelog_url": "https://github.com/mijsys/MikroCMS/releases",
   "download_url": "https://github.com/mijsys/MikroCMS/archive/refs/heads/main.zip",
-  "notes": "Wersja 1.1.7.8: kompletny rebuild page buildera (palette/canvas/inspector), upload obrazow oraz naprawa rozjazdu strony ustawien (zakladki sekcji).",
+  "notes": "Wersja 1.1.8.1: ulepszenia UI strony ustawien - konwersja na pełnoekranowy layout workbench z lepszą organizacją sekcji.",
   "changes": [
     "Nowy builder stron: tile palette + canvas + inspector z blokami heading/text/image/button/hero/divider/spacer/html",
     "Drag and drop z narzedziami inline, float/block display, undo/redo oraz upload obrazow",
